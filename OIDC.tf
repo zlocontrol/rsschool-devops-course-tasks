@@ -27,6 +27,9 @@ resource "aws_iam_role_policy_attachment" "github_actions_role_policy_attachment
 
 
 
+
+
+
 # # 2. Создание IAM-роли, которую будут принимать GitHub Actions
 # # Эта роль будет использоваться GitHub Actions для получения временных учетных данных AWS.
 resource "aws_iam_role" "github_actions_role" {

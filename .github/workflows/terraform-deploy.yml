@@ -1,53 +1,72 @@
-
 name: Terraform AWS Deploy
 
 on:
   push:
     branches:
       - main
+      - task-1
   pull_request:
     branches:
       - main
   workflow_dispatch:
 
-
 permissions:
   id-token: write
   contents: read
 
+env:
+  TERRAFORM_VERSION: "1.6.6"
+  AWS_REGION: "us-east-1"
+
 jobs:
-  terraform:
-    name: "Terraform Apply to AWS"
+  terraform-check:
+    name: Terraform Format Check
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - run: terraform fmt -check -recursive
+
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: terraform-check
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GithubActionsRole
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - run: terraform init
+      - run: terraform validate -no-color
+      - run: terraform plan -no-color -input=false -out=tfplan
+
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: terraform-plan
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.x
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - name: Terraform Init
-        id: init
-        run: terraform init
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GithubActionsRole
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Validate
-        id: validate
-        run: terraform validate -no-color
-
-      - name: Terraform Plan
-        id: plan
-        run: terraform plan -no-color -input=false -out=tfplan
-
-      - name: Terraform Apply
-        id: apply
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: terraform apply -auto-approve tfplan
+      - run: terraform init
+      - run: terraform apply -auto-approve tfplan
