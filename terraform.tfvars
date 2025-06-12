@@ -23,5 +23,5 @@ role_name = "GithubActionsRole"
 github_repo_owner = "zlocontrol"
 
 
-github_repo_name  = "rsschool-devops-course-tasks"
+github_repo_name = "rsschool-devops-course-tasks"
 

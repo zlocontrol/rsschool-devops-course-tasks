@@ -11,12 +11,12 @@ variable "iam_user_name" {
 
 variable "group_name" {
   description = "Name IAM group"
-  type = string
+  type        = string
 }
 
 variable "role_name" {
   description = "Role IAM"
-  type = string
+  type        = string
 }
 
 

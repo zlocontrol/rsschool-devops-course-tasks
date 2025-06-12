@@ -35,6 +35,6 @@ resource "aws_iam_user" "user-rolling" {
 
 resource "aws_iam_user_group_membership" "user-rolling" {
   groups = [aws_iam_group.group-rolling.name]
-  user = aws_iam_user.user-rolling.name
+  user   = aws_iam_user.user-rolling.name
 }
 

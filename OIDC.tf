@@ -22,8 +22,8 @@ resource "aws_iam_openid_connect_provider" "github" {
 # 3. Прикрепление политик к IAM-роли GithubActionsRole
 # Используем ваш ранее определенный локальный список политик 'policies'.
 resource "aws_iam_role_policy_attachment" "github_actions_role_policy_attachments" {
-  for_each   = toset(local.policies) # Итерируем по всем политикам в locals.policies
-  policy_arn = each.value            # ARN текущей политики из списка
+  for_each   = toset(local.policies)                 # Итерируем по всем политикам в locals.policies
+  policy_arn = each.value                            # ARN текущей политики из списка
   role       = aws_iam_role.github_actions_role.name # Имя созданной IAM-роли
 }
 
@@ -49,14 +49,14 @@ resource "aws_iam_role" "github_actions_role" {
         Condition = {
           StringEquals = {
             # Этот ключ указывает, что токен должен быть предназначен для AWS STS.
-            "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+            "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com"
           },
           StringLike = {
             # Этот ключ указывает на конкретный репозиторий GitHub, который может принимать роль.
             # Формат: "repo:<Организация_GitHub>/<Имя_Репозитория>:*"
             # '*' означает любую ветку/тег в этом репозитории.
             # ОБЯЗАТЕЛЬНО УБЕДИТЕСЬ, что имя организации и репозитория указаны ВЕРНО.
-            "token.actions.githubusercontent.com:sub": "repo:${var.github_repo_owner}/${var.github_repo_name}:*"
+            "token.actions.githubusercontent.com:sub" : "repo:${var.github_repo_owner}/${var.github_repo_name}:*"
           }
         }
       }
