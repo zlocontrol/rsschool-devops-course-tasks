@@ -50,6 +50,12 @@ jobs:
       - run: terraform init
       - run: terraform validate -no-color
       - run: terraform plan -no-color -input=false -out=tfplan
+      - name: Upload tfplan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: tfplan
+
 
   terraform-apply:
     name: Terraform Apply
@@ -69,4 +75,9 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - run: terraform init
+      - name: Download tfplan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+
       - run: terraform apply -auto-approve tfplan
