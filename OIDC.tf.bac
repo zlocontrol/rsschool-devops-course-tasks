@@ -1,0 +1,65 @@
+# # We get the ID of the current AWS account. This is convenient for generating ARNs.
+# data "aws_caller_identity" "current" {}
+#
+# # 1. Create an OIDC provider for GitHub Actions
+# # This AWS IAM OIDC Provider resource tells AWS to trust JWT tokens issued by GitHub Actions at the specified URL.
+# resource "aws_iam_openid_connect_provider" "github" {
+#   url = "https://token.actions.githubusercontent.com"
+#   client_id_list = [
+#     "sts.amazonaws.com", # This is the Client ID (or Audience) that AWS STS expects in the token
+#   ]
+#   # thumbprint is the fingerprint of the GitHub root certificate. It is stable, but can be updated.
+# # The current one can always be found in the GitHub or AWS documentation, or obtained using OpenSSL.
+#   thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780fa86"]
+# }
+#
+#
+#
+#
+#
+#
+# # 3. Attach policies to the GithubActionsRole IAM role
+# # Using your previously defined local policy list 'policies'.
+# resource "aws_iam_role_policy_attachment" "github_actions_role_policy_attachments" {
+#   for_each   = toset(local.policies)                 # Iterate over all policies in locals.policies
+#   policy_arn = each.value                            # ARN of the current policy from the list
+#   role       = aws_iam_role.github_actions_role.name # The name of the created IAM role
+# }
+#
+#
+#
+#
+#
+#
+# # # 2. Create an IAM role that GitHub Actions will assume
+# # # This role will be used by GitHub Actions to obtain temporary AWS credentials.
+# resource "aws_iam_role" "github_actions_role" {
+#   name = "GithubActionsRole"
+#
+#   assume_role_policy = jsonencode({
+#     Version = "2012-10-17",
+#     Statement = [
+#       {
+#         Effect = "Allow",
+#         Principal = {
+#           Federated = aws_iam_openid_connect_provider.github.arn
+#         },
+#         Action = "sts:AssumeRoleWithWebIdentity",
+#         Condition = {
+#           StringEquals = {
+#             # This key specifies that the token should be for AWS STS.
+#             "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com"
+#           },
+#           StringLike = {
+#             # This key points to a specific GitHub repository that can accept the role.
+#             # Format: "repo:<GitHub_Organization>/<Repository_Name>:*"
+#             # '*' means any branch/tag in this repository.
+#             # PLEASE MAKE SURE that the organization and repository name are CORRECT.
+#             "token.actions.githubusercontent.com:sub" : "repo:${var.github_repo_owner}/${var.github_repo_name}:*"
+#           }
+#         }
+#       }
+#     ]
+#   })
+# }
+#
