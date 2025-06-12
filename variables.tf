@@ -28,16 +28,62 @@ variable "role_name" {
 
 
 variable "github_repo_owner" {
-  description = "Владелец (организация или пользователь) GitHub-репозитория для OIDC."
+  description = "Owner (organization or user) GitHub-репозитория для OIDC."
   type        = string
-  default     = "zlocontrol" # <--- Установите владельца по умолчанию
+  default     = "zlocontrol"
 }
 
 variable "github_repo_name" {
-  description = "Имя GitHub-репозитория для OIDC."
+  description = "The name of the GitHub repository for OIDC."
   type        = string
-  default     = "rsschool-devops-course-tasks" # <--- Установите имя репозитория по умолчанию
+  default     = "rsschool-devops-course-tasks" #
 }
 
 
 
+
+
+variable "project_name" {
+  description = "Project name (for tags)"
+  type        = string
+  default     = "project*"
+}
+
+# Название бакета (без уникального суффикса)
+variable "s3_bucket_name" {
+  description = "Base name for the S3 bucket to store Terraform state"
+  type        = string
+}
+
+# Название DynamoDB таблицы для блокировки стейта
+variable "dynamodb_table_name" {
+  description = "Name of the DynamoDB table used for Terraform state locking"
+  type        = string
+}
+
+# Общие теги (словарь key = value)
+variable "common_tags" {
+  description = "A map of tags to apply to resources"
+  type        = map(string)
+  default = {
+    Owner     = "your-name"
+    ManagedBy = "Terraform"
+    Project   = "DevOps Course"
+  }
+}
+
+variable "environment" {
+  description = "Environment (eg dev, prod)"
+  type        = string
+  default     = "dev"
+}
+
+
+
+
+
+variable "owner" {
+  description = "Owner of the infrastructure"
+  type        = string
+  default     = "devops-team"
+}

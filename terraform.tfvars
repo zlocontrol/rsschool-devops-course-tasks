@@ -25,3 +25,12 @@ github_repo_owner = "zlocontrol"
 
 github_repo_name = "rsschool-devops-course-tasks"
 
+project_name        = "rsschool"
+environment         = "dev"
+s3_bucket_name      = "tfstate-rsschool"
+dynamodb_table_name = "terraform-locks"
+
+
+
+
+owner = "rsschool"
