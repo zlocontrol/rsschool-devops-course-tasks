@@ -14,6 +14,8 @@ iam_user_name = "my_user_task1"
 
 
 
+
+
 #name_role
 role_name = "GithubActionsRole"
 

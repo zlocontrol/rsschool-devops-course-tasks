@@ -17,6 +17,8 @@ resource "aws_iam_openid_connect_provider" "github" {
 
 
 
+
+
 # 3. Прикрепление политик к IAM-роли GithubActionsRole
 # Используем ваш ранее определенный локальный список политик 'policies'.
 resource "aws_iam_role_policy_attachment" "github_actions_role_policy_attachments" {

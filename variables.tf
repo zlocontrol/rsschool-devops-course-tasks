@@ -25,6 +25,8 @@ variable "role_name" {
 
 
 
+
+
 variable "github_repo_owner" {
   description = "Владелец (организация или пользователь) GitHub-репозитория для OIDC."
   type        = string

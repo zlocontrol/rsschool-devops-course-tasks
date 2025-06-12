@@ -19,6 +19,9 @@ locals {
 
 
 
+
+
+
 resource "aws_iam_group_policy_attachment" "group-rolling" {
   for_each   = toset(local.policies)
   group      = aws_iam_group.group-rolling.name
