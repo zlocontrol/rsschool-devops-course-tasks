@@ -61,7 +61,7 @@ jobs:
           terraform apply -auto-approve \
             -var="aws_region=${{ env.AWS_REGION }}" \
             -var="s3_bucket_name=terraform-state-${CLEAN_PROJECT_NAME}-${SANITIZED_ENV}" \
-            -var="project_name=$CLEAN_PROJECT_NAME" \                                      
+            -var="project_name=$CLEAN_PROJECT_NAME" \                                
             -var="environment=${SANITIZED_ENV}" \
             -var="github_repo_owner=$CLEAN_OWNER_NAME" \
             -var="github_repo_name=$CLEAN_REPO_NAME" \
