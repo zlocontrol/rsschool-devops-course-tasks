@@ -50,22 +50,8 @@ jobs:
 
       - name: Terraform Apply (create resources)
         working-directory: bootstrap
-        run: |
-          CLEAN_REPO_NAME=$(basename "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          CLEAN_OWNER_NAME=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          CLEAN_PROJECT_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-') 
-          SANITIZED_ENV=$(echo "${{ env.TF_ENV }}" | tr -cd '[:alnum:]-')
+        run: terraform apply -auto-approve -var-file="terraform.tfvars"
 
-          ROLE_NAME="GithubActionsRole-${SANITIZED_ENV}"
-
-          terraform apply -auto-approve \
-            -var="aws_region=${{ env.AWS_REGION }}" \
-            -var="s3_bucket_name=tfstate-${CLEAN_PROJECT_NAME}-${SANITIZED_ENV}" \
-            -var="project_name=$CLEAN_PROJECT_NAME" \
-            -var="environment=${SANITIZED_ENV}" \
-            -var="github_repo_owner=$CLEAN_OWNER_NAME" \
-            -var="github_repo_name=$CLEAN_REPO_NAME" \
-            -var="role_name=$ROLE_NAME"
       
 
       - name: Extract terraform outputs
