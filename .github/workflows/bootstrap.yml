@@ -66,6 +66,8 @@ jobs:
 
           echo "::add-mask::$TF_BUCKET"
           echo "::add-mask::$GH_ROLE"
+          echo "TF_BUCKET=$TF_BUCKET"
+          echo "GH_ROLE=$GH_ROLE"
 
           gh secret set TF_BUCKET_NAME_${SANITIZED_ENV} --body "$TF_BUCKET" --repo ${{ github.repository }}
           gh secret set GH_ROLE_ARN_${SANITIZED_ENV} --body "$GH_ROLE" --repo ${{ github.repository }}
