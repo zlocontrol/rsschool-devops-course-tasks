@@ -73,6 +73,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_ADMIN_PAT }}
         run: |
           SANITIZED_ENV=$(echo "${{ env.TF_ENV }}" | tr '/-' '_' | tr -cd '[:alnum:]_')
+
+          TF_BUCKET=$(jq -r .s3_bucket_name.value tf_outputs.json)
+          GH_ROLE=$(jq -r .github_role_arn.value tf_outputs.json)
+
+          echo "::add-mask::$TF_BUCKET"
+          echo "::add-mask::$GH_ROLE"
+
           gh secret set TF_BUCKET_NAME_${SANITIZED_ENV} --body "$TF_BUCKET" --repo ${{ github.repository }}
-          gh secret set GH_ROLE_ARN_${SANITIZED_ENV} --body "$GITHUB_ROLE_ARN" --repo ${{ github.repository }}
+          gh secret set GH_ROLE_ARN_${SANITIZED_ENV} --body "$GH_ROLE" --repo ${{ github.repository }}
 
