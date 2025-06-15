@@ -15,6 +15,7 @@ permissions:
   id-token: write
   contents: read
 
+
 env:
   TERRAFORM_VERSION: "1.6.6"
   AWS_REGION: "us-east-1"
@@ -24,6 +25,7 @@ jobs:
   bootstrap:
     name: Create S3 Bucket & IAM Role
     runs-on: ubuntu-latest
+
 
     steps:
       - name: Checkout repository
@@ -59,7 +61,7 @@ jobs:
       - name: Extract terraform outputs and save to GitHub Secrets
         working-directory: bootstrap
         env:
-          GH_TOKEN: ${{ secrets.GH_ADMIN_PAT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           SANITIZED_ENV=$(echo "${TF_ENV}" | tr '/-' '_' | tr -cd '[:alnum:]_')
 
