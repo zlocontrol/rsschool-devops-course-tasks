@@ -69,6 +69,7 @@ jobs:
           echo "GITHUB_ROLE_ARN=$GITHUB_ROLE_ARN" >> $GITHUB_ENV
 
       - name: Save outputs to GitHub Secrets
+        working-directory: bootstrap
         env:
           GH_TOKEN: ${{ secrets.GH_ADMIN_PAT }}
         run: |
