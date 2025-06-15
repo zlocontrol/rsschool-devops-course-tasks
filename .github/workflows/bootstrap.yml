@@ -57,14 +57,23 @@ jobs:
       - name: Terraform Apply (create resources)
         working-directory: bootstrap
         run: |
+          CLEAN_REPO_NAME=$(basename "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          CLEAN_OWNER_NAME=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+
+
+          SANITIZED_ENV=$(echo "${{ env.TF_ENV }}" | tr -cd '[:alnum:]-')
+
+          ROLE_NAME="github-actions-role-${{ env.CLEAN_PROJECT_NAME }}-${SANITIZED_ENV}"
+
           terraform apply -auto-approve \
             -var="aws_region=${{ env.AWS_REGION }}" \
-            -var="s3_bucket_name=terraform-state-${{ env.CLEAN_PROJECT_NAME }}-${{ env.TF_ENV }}" \
+            -var="s3_bucket_name=terraform-state-${{ env.CLEAN_PROJECT_NAME }}-${SANITIZED_ENV}" \
             -var="project_name=${{ env.CLEAN_PROJECT_NAME }}" \
-            -var="environment=${{ env.TF_ENV }}" \
-            -var="github_repo_owner=${{ env.CLEAN_OWNER_NAME }}" \
-            -var="github_repo_name=${{ env.CLEAN_REPO_NAME }}" \
-            -var="role_name=${{ env.ROLE_NAME }}"
+            -var="environment=${SANITIZED_ENV}" \
+            -var="github_repo_owner=$CLEAN_OWNER_NAME" \
+            -var="github_repo_name=$CLEAN_REPO_NAME" \
+            -var="role_name=$ROLE_NAME"
+      
 
       - name: Extract terraform outputs
         id: extract
