@@ -59,7 +59,7 @@ jobs:
         run: |
           terraform apply -auto-approve \
             -var="aws_region=${{ env.AWS_REGION }}" \
-            -var="bucket_name=terraform-state-${{ env.CLEAN_PROJECT_NAME }}-${{ env.TF_ENV }}" \
+            -var="s3_bucket_name=terraform-state-${{ env.CLEAN_PROJECT_NAME }}-${{ env.TF_ENV }}" \
             -var="project_name=${{ env.CLEAN_PROJECT_NAME }}" \
             -var="environment=${{ env.TF_ENV }}" \
             -var="github_repo_owner=${{ env.CLEAN_OWNER_NAME }}" \
