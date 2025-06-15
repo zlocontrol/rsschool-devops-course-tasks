@@ -52,35 +52,22 @@ jobs:
         working-directory: bootstrap
         run: terraform apply -auto-approve -var-file="terraform.tfvars"
 
-      
 
-      - name: Extract terraform outputs
-        id: extract
-        working-directory: bootstrap
-        run: |
-          terraform output -json > tf_outputs.json
-          TF_BUCKET=$(jq -r .s3_bucket_name.value tf_outputs.json)
-          GITHUB_ROLE_ARN=$(jq -r .github_role_arn.value tf_outputs.json)
 
-          echo "::add-mask::$TF_BUCKET"
-          echo "::add-mask::$GITHUB_ROLE_ARN"
-
-          echo "TF_BUCKET=$TF_BUCKET" >> $GITHUB_ENV
-          echo "GITHUB_ROLE_ARN=$GITHUB_ROLE_ARN" >> $GITHUB_ENV
-
-      - name: Save outputs to GitHub Secrets
+      - name: Extract terraform outputs and save to GitHub Secrets
         working-directory: bootstrap
         env:
           GH_TOKEN: ${{ secrets.GH_ADMIN_PAT }}
         run: |
           SANITIZED_ENV=$(echo "${{ env.TF_ENV }}" | tr '/-' '_' | tr -cd '[:alnum:]_')
 
-          TF_BUCKET=$(jq -r .s3_bucket_name.value tf_outputs.json)
-          GH_ROLE=$(jq -r .github_role_arn.value tf_outputs.json)
+          TF_BUCKET=$(terraform output -raw s3_bucket_name)
+          GH_ROLE=$(terraform output -raw github_role_arn)
 
           echo "::add-mask::$TF_BUCKET"
           echo "::add-mask::$GH_ROLE"
 
           gh secret set TF_BUCKET_NAME_${SANITIZED_ENV} --body "$TF_BUCKET" --repo ${{ github.repository }}
           gh secret set GH_ROLE_ARN_${SANITIZED_ENV} --body "$GH_ROLE" --repo ${{ github.repository }}
+      
 
