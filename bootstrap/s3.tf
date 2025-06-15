@@ -5,7 +5,7 @@ resource "random_id" "unique_suffix" {
 
 # Create an S3 bucket to store Terraform state
 resource "aws_s3_bucket" "terraform_state" {
-  bucket              = "${var.s3_bucket_name}-${random_id.unique_suffix.hex}"
+  bucket              = "${var.s3_bucket_name}-${var.environment}-${random_id.unique_suffix.hex}"
   force_destroy       = false
   object_lock_enabled = false
 

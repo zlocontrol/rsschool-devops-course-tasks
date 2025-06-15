@@ -1,9 +1,9 @@
 aws_region = "us-east-1"
 
 #name_role
-role_name = "GithubActionsRole9"
+role_name = "GithubActionsRole"
 
-# variables.tf
+
 github_repo_owner = "zlocontrol"
 
 

@@ -72,7 +72,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_ADMIN_PAT }}
         run: |
-          SANITIZED_ENV=$(echo "${{ env.TF_ENV }}" | tr '/' '-' | tr -cd '[:alnum:]-_')
+          SANITIZED_ENV=$(echo "${{ env.TF_ENV }}" | tr '/-' '_' | tr -cd '[:alnum:]_')
           gh secret set TF_BUCKET_NAME_${SANITIZED_ENV} --body "$TF_BUCKET" --repo ${{ github.repository }}
           gh secret set GITHUB_ROLE_ARN_${SANITIZED_ENV} --body "$GITHUB_ROLE_ARN" --repo ${{ github.repository }}
 
