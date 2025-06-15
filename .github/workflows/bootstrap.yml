@@ -1,0 +1,88 @@
+name: Bootstrap Infra and GitHub Role
+
+on:
+  push:
+    branches:
+      - 'create/**'
+  workflow_dispatch:
+    inputs:
+      tf_env:
+        description: 'Terraform environment (e.g. dev, prod)'
+        required: true
+        default: 'dev'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TERRAFORM_VERSION: "1.6.6"
+  AWS_REGION: "us-east-1"
+  TF_ENV: ${{ github.event.inputs.tf_env || github.ref_name }}
+
+jobs:
+  bootstrap:
+    name: Create S3 Bucket & IAM Role
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set CLEAN_PROJECT_NAME, OWNER and ROLE_NAME
+        run: |
+          echo "CLEAN_PROJECT_NAME=$(echo '${{ github.event.repository.name }}' | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')" >> $GITHUB_ENV
+          echo "CLEAN_OWNER_NAME=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "CLEAN_REPO_NAME=$(basename '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "ROLE_NAME=github-actions-role-${{ github.event.repository.name }}-${{ env.TF_ENV }}" >> $GITHUB_ENV
+
+      - name: Configure AWS credentials (Access Keys for bootstrap)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.BOOTSTRAP_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.BOOTSTRAP_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Terraform & GitHub CLI
+        run: |
+          sudo apt-get update && sudo apt-get install -y unzip curl jq gh
+          curl -fsSL https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip -o terraform.zip
+          unzip terraform.zip
+          sudo mv terraform /usr/local/bin/
+
+      - name: Terraform Init (no backend)
+        working-directory: bootstrap
+        run: terraform init -backend=false
+
+      - name: Terraform Apply (create resources)
+        working-directory: bootstrap
+        run: |
+          terraform apply -auto-approve \
+            -var="aws_region=${{ env.AWS_REGION }}" \
+            -var="bucket_name=terraform-state-${{ env.CLEAN_PROJECT_NAME }}-${{ env.TF_ENV }}" \
+            -var="project_name=${{ env.CLEAN_PROJECT_NAME }}" \
+            -var="environment=${{ env.TF_ENV }}" \
+            -var="github_repo_owner=${{ env.CLEAN_OWNER_NAME }}" \
+            -var="github_repo_name=${{ env.CLEAN_REPO_NAME }}" \
+            -var="role_name=${{ env.ROLE_NAME }}"
+
+      - name: Extract terraform outputs
+        id: extract
+        working-directory: bootstrap
+        run: |
+          terraform output -json > tf_outputs.json
+          TF_BUCKET=$(jq -r .s3_bucket_name.value tf_outputs.json)
+          GITHUB_ROLE_ARN=$(jq -r .github_role_arn.value tf_outputs.json)
+
+          echo "::add-mask::$TF_BUCKET"
+          echo "::add-mask::$GITHUB_ROLE_ARN"
+
+          echo "TF_BUCKET=$TF_BUCKET" >> $GITHUB_ENV
+          echo "GITHUB_ROLE_ARN=$GITHUB_ROLE_ARN" >> $GITHUB_ENV
+
+      - name: Save outputs to GitHub Secrets
+        env:
+          GH_TOKEN: ${{ secrets.GH_ADMIN_PAT }}
+        run: |
+          gh secret set TF_BUCKET_NAME_${{ env.TF_ENV }} --body "$TF_BUCKET" --repo ${{ github.repository }}
+          gh secret set GITHUB_ROLE_ARN_${{ env.TF_ENV }} --body "$GITHUB_ROLE_ARN" --repo ${{ github.repository }}
