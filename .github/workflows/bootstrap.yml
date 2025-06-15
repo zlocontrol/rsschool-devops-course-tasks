@@ -64,8 +64,7 @@ jobs:
           TF_BUCKET=$(terraform output -raw s3_bucket_name)
           GH_ROLE=$(terraform output -raw github_role_arn)
 
-#          echo "::add-mask::$TF_BUCKET"
-#         echo "::add-mask::$GH_ROLE"
+
           echo "TF_BUCKET=$TF_BUCKET"
           echo "GH_ROLE=$GH_ROLE"
 
