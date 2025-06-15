@@ -29,12 +29,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set CLEAN_PROJECT_NAME, OWNER and ROLE_NAME
-        run: |
-          echo "CLEAN_PROJECT_NAME=$(echo '${{ github.event.repository.name }}' | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')" >> $GITHUB_ENV
-          echo "CLEAN_OWNER_NAME=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-          echo "CLEAN_REPO_NAME=$(basename '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-          echo "ROLE_NAME=github-actions-role-${{ github.event.repository.name }}-${{ env.TF_ENV }}" >> $GITHUB_ENV
 
       - name: Configure AWS credentials (Access Keys for bootstrap)
         uses: aws-actions/configure-aws-credentials@v4
@@ -59,16 +53,15 @@ jobs:
         run: |
           CLEAN_REPO_NAME=$(basename "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           CLEAN_OWNER_NAME=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-
-
+          CLEAN_PROJECT_NAME=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-') 
           SANITIZED_ENV=$(echo "${{ env.TF_ENV }}" | tr -cd '[:alnum:]-')
 
-          ROLE_NAME="github-actions-role-${{ env.CLEAN_PROJECT_NAME }}-${SANITIZED_ENV}"
+          ROLE_NAME="GithubActionsRole-${SANITIZED_ENV}"
 
           terraform apply -auto-approve \
             -var="aws_region=${{ env.AWS_REGION }}" \
-            -var="s3_bucket_name=terraform-state-${{ env.CLEAN_PROJECT_NAME }}-${SANITIZED_ENV}" \
-            -var="project_name=${{ env.CLEAN_PROJECT_NAME }}" \
+            -var="s3_bucket_name=terraform-state-${CLEAN_PROJECT_NAME}-${SANITIZED_ENV}" \
+            -var="project_name=$CLEAN_PROJECT_NAME" \                                      
             -var="environment=${SANITIZED_ENV}" \
             -var="github_repo_owner=$CLEAN_OWNER_NAME" \
             -var="github_repo_name=$CLEAN_REPO_NAME" \
