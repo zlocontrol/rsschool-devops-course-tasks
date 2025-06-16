@@ -58,25 +58,25 @@ jobs:
 
 
 
-      - name: Extract terraform outputs and save to GitHub Secrets
-        working-directory: bootstrap
+      - name: Save outputs to GitHub Secrets
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_ADMIN_PAT }}
         run: |
           SANITIZED_ENV=$(echo "${TF_ENV}" | tr '/-' '_' | tr -cd '[:alnum:]_')
-
+          
           TF_BUCKET=$(terraform output -raw s3_bucket_name)
           GH_ROLE=$(terraform output -raw github_role_arn)
-
+          
           echo "::add-mask::$TF_BUCKET"
           echo "::add-mask::$GH_ROLE"
-
+          
           echo "TF_BUCKET=$TF_BUCKET"
           echo "GH_ROLE=$GH_ROLE"
           echo "ENV=$SANITIZED_ENV"
-
+          
           gh secret set TF_BUCKET_NAME_${SANITIZED_ENV} --body "$TF_BUCKET" --repo "${GITHUB_REPOSITORY}"
           gh secret set GH_ROLE_ARN_${SANITIZED_ENV} --body "$GH_ROLE" --repo "${GITHUB_REPOSITORY}"
+     
       
       
 
