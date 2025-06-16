@@ -8,14 +8,6 @@ iam_user_name = "my_user_task1"
 
 
 
-
-
-
-
-
-
-
-
 #name_role
 role_name = "GithubActionsRole"
 
@@ -25,10 +17,10 @@ github_repo_owner = "zlocontrol"
 
 github_repo_name = "rsschool-devops-course-tasks"
 
-project_name        = "rsschool"
-environment         = "dev"
-s3_bucket_name      = "tfstate-rsschool"
-dynamodb_table_name = "terraform-locks"
+project_name   = "rsschool"
+environment    = "dev"
+s3_bucket_name = "exemple"
+
 
 
 

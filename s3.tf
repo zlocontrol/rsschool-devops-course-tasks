@@ -3,7 +3,7 @@ resource "random_id" "unique_suffix" {
   byte_length = 8 # 8 bytes will generate a 16-character string
 }
 
-# Create an S3 bucket to store Terraform state
+# Create an S3 bucket
 resource "aws_s3_bucket" "terraform_state" {
   bucket              = "${var.s3_bucket_name}-${random_id.unique_suffix.hex}"
   force_destroy       = false
