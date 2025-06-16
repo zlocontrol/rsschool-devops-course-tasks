@@ -4,10 +4,10 @@ data "aws_caller_identity" "current" {}
 
 # Пытаемся создать OIDC провайдер (если он ещё не существует)
 resource "aws_iam_openid_connect_provider" "github" {
-  count            = var.create_oidc_provider ? 1 : 0
-  url              = "https://token.actions.githubusercontent.com"
-  client_id_list   = ["sts.amazonaws.com"]
-  thumbprint_list  = ["6938fd4d98bab03faadb97b34396831e3780fa86"] # ВОЗВРАЩЕНО: thumbprint_list обязателен!
+  count           = var.create_oidc_provider ? 1 : 0
+  url             = "https://token.actions.githubusercontent.com"
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780fa86"] # ВОЗВРАЩЕНО: thumbprint_list обязателен!
 }
 
 # Получаем ARN существующего OIDC провайдера, если он НЕ создается этим кодом.
@@ -21,7 +21,7 @@ data "aws_iam_openid_connect_provider" "github_existing" {
 locals {
   oidc_provider_arn = var.create_oidc_provider ? (
     aws_iam_openid_connect_provider.github[0].arn
-  ) : (
+    ) : (
     data.aws_iam_openid_connect_provider.github_existing[0].arn
   )
 
@@ -64,7 +64,7 @@ resource "aws_iam_role" "github_actions_role" {
 
 # Прикрепляем IAM политики
 resource "aws_iam_role_policy_attachment" "github_actions_role_policy_attachments" {
-  for_each    = toset(local.policies)
+  for_each   = toset(local.policies)
   policy_arn = each.value
-  role        = aws_iam_role.github_actions_role.name
+  role       = aws_iam_role.github_actions_role.name
 }
