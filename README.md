@@ -1,4 +1,54 @@
 # rsschool-devops-course-tasks
+English Version: GitHub Actions: Terraform AWS Deploy
+This GitHub Actions workflow is designed to automate the validation, planning, and application of your Terraform configurations to AWS. It ensures your infrastructure changes are formatted correctly, planned thoroughly, and applied securely using an IAM Role assumed via OIDC.
+
+Purpose & Features
+Code Quality Check: Automatically formats and checks your Terraform code for consistency.
+Secure AWS Authentication: Assumes an AWS IAM Role via OpenID Connect (OIDC), eliminating the need for static AWS credentials in your repository.
+Dynamic Backend Configuration: Generates the S3 backend configuration on the fly using secrets for the correct bucket name.
+Environment-Specific Deployments: Supports different environments (dev, prod) by loading environment-specific Terraform variable files (terraform.<env>.tfvars) and dynamically fetching associated secrets.
+Plan Review: Creates and uploads a tfplan artifact, allowing for manual review of proposed changes before automatic application to main.
+Controlled Application: Automatically applies changes only on push to the main branch, ensuring a more controlled deployment pipeline.
+Prerequisites
+Before running this workflow, ensure you have:
+
+Terraform Code: Your Terraform .tf files and terraform.<env>.tfvars files (e.g., terraform.dev.tfvars, terraform.prod.tfvars) in your repository.
+Bootstrap Infrastructure: The S3 bucket for Terraform state and the OIDC-enabled IAM Role (e.g., GH_ROLE_ARN_dev, GH_ROLE_ARN_prod) must already be created, ideally by a preceding bootstrap workflow.
+GitHub Secrets: The following secrets must be available in your repository (set by the bootstrap workflow):
+TF_BUCKET_NAME_dev: S3 bucket name for dev environment.
+GH_ROLE_ARN_dev: IAM Role ARN for dev environment.
+TF_BUCKET_NAME_prod: S3 bucket name for prod environment.
+GH_ROLE_ARN_prod: IAM Role ARN for prod environment.
+Workflow Structure
+This workflow consists of three main jobs:
+
+terraform-check: Runs terraform fmt -check -recursive to ensure code formatting compliance.
+terraform-plan:
+Checks out the code.
+Dynamically selects and exports the correct S3 bucket name and IAM Role ARN based on the TF_ENV (defaults to dev).
+Configures AWS credentials by assuming the specified OIDC role.
+Generates a backend.tf file for S3 state.
+Validates the presence of terraform.<ENV>.tfvars.
+Runs terraform init and terraform validate.
+Creates a tfplan file and uploads it as an artifact.
+terraform-apply:
+Conditional Run: Only runs on push events to the main branch.
+Similar setup steps to terraform-plan (checkout, setup Terraform, export secrets, configure AWS credentials, generate backend).
+Downloads the tfplan artifact from the terraform-plan job.
+Applies the tfplan to your AWS environment.
+How to Use
+Set Environment Variables:
+
+The TF_ENV environment variable defaults to "dev". You can change this directly in the workflow file or override it via workflow_dispatch if you modify the input section.
+Ensure your terraform.<env>.tfvars files exist for each environment you intend to deploy to (e.g., terraform.dev.tfvars, terraform.prod.tfvars).
+Trigger the Workflow:
+
+Automatic:
+Push changes to the main branch (will trigger check, plan, and apply).
+Push changes to any branch matching task_* (will trigger check and plan only).
+Manual: Go to the "Actions" tab in your repository, select "Terraform AWS Deploy" from the workflows list, and click "Run workflow". Note that manual runs will only perform check and plan unless you adjust the terraform-apply condition.
+Monitor Execution: Observe the workflow run in the GitHub Actions tab. Review the terraform-plan output and the tfplan artifact carefully before applying changes to main.
+
 
 task_1
 
@@ -51,13 +101,7 @@ It includes 3 jobs:
 
 ---
 
-### 🔐 OIDC Federation (Optional)
 
-Created:
-
-- **OIDC Provider** for `https://token.actions.githubusercontent.com`
-    
-- **IAM Role** `GithubActionsRole` with trust policy restricted to the current repo
     
 
 ---
@@ -78,51 +122,6 @@ Created:
 
 📁 Structure
 .
-├── main.tf
-├── iam.tf
-├── OIDC.tf
-├── variables.tf
-├── terraform.tfvars
-├── README.md
-└── .github/workflows/terraform-deploy.yml
 
+task_2
 
-The `iam.tf` file sets up:
-
-- An OIDC identity provider for GitHub Actions.
-    
-- An IAM role `GithubActionsRole` that can be assumed by GitHub Actions via OIDC.
-    
-- A trust policy restricting access to a specific repository.
-    
-- Attaches AWS managed policies to the role for infrastructure management.
-    
-
-This allows secure authentication from GitHub Actions to AWS without long-lived credentials.
-
-- An IAM group with a predefined set of AWS managed policies.
-    
-- An IAM user.
-    
-- Assigns the user to the group.
-    
-
-The attached policies provide full access to services like EC2, S3, IAM, VPC, Route53, SQS, and EventBridge.
-
-
-### `OIDC.tf` – GitHub Actions OIDC Integration
-
-This file sets up OpenID Connect (OIDC) authentication between GitHub Actions and AWS:
-
-- **Retrieves the current AWS account ID** (used to construct ARNs).
-    
-- **Creates an OIDC provider** for GitHub (`token.actions.githubusercontent.com`).
-    
-- **Creates an IAM role** (`GithubActionsRole`) that GitHub Actions can assume using OIDC.
-    
-- **Attaches AWS managed policies** (e.g., S3, EC2, IAM) to the role.
-    
-- **Uses conditions** to restrict access only to a specific repository.
-    
-
-This setup allows GitHub Actions to securely access AWS resources without static credentials.
