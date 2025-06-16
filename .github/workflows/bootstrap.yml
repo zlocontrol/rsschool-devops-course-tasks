@@ -58,7 +58,8 @@ jobs:
 
 
 
-      - name: Save outputs to GitHub Secrets
+      - name: Extract terraform outputs and save to GitHub Secrets
+        working-directory: bootstrap
         env:
           GH_TOKEN: ${{ secrets.GH_ADMIN_PAT }}
         run: |
