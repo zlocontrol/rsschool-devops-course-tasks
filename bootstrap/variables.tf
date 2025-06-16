@@ -56,3 +56,9 @@ variable "owner" {
   type        = string
   default     = "devops-team"
 }
+
+variable "create_oidc_provider" {
+  description = "Create GitHub OIDC provider?"
+  type        = bool
+  default     = true
+}

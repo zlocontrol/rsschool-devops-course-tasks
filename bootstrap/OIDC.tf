@@ -1,23 +1,11 @@
+# Получаем текущий AWS аккаунт (используется для построения ARN вручную)
 data "aws_caller_identity" "current" {}
 
-# Trying to find an existing OIDC provider - do not use directly!
-data "aws_iam_openid_connect_provider" "existing" {
-  url = "https://token.actions.githubusercontent.com"
-}
-
-# Create OIDC provider only if not found
-resource "aws_iam_openid_connect_provider" "github" {
-  count = try(data.aws_iam_openid_connect_provider.existing.arn, null) != null ? 0 : 1
-
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780fa86"]
-}
-
-# Use local variable with ARN
+# Local values
 locals {
-  maybe_existing     = try(data.aws_iam_openid_connect_provider.existing.arn, null)
-  oidc_provider_arn  = local.maybe_existing != null ? local.maybe_existing : aws_iam_openid_connect_provider.github[0].arn
+  oidc_url        = "https://token.actions.githubusercontent.com"
+  oidc_thumbprint = "6938fd4d98bab03faadb97b34396831e3780fa86"
+  oidc_provider_arn_manual = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
 
   policies = [
     "arn:aws:iam::aws:policy/AmazonEC2FullAccess",
@@ -30,12 +18,16 @@ locals {
   ]
 }
 
+# Create an OIDC provider - let it always be idempotent
+resource "aws_iam_openid_connect_provider" "github" {
+  url             = local.oidc_url
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [local.oidc_thumbprint]
+}
 
-# # 2. Create an IAM role that GitHub Actions will assume
-# # This role will be used by GitHub Actions to obtain temporary AWS credentials.
+# The role that GitHub will use
 resource "aws_iam_role" "github_actions_role" {
   name = "${var.role_name}-${var.environment}"
-
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -43,7 +35,7 @@ resource "aws_iam_role" "github_actions_role" {
       {
         Effect = "Allow",
         Principal = {
-          Federated = local.oidc_provider_arn
+          Federated = aws_iam_openid_connect_provider.github.arn
         },
         Action = "sts:AssumeRoleWithWebIdentity",
         Condition = {
@@ -57,4 +49,11 @@ resource "aws_iam_role" "github_actions_role" {
       }
     ]
   })
+}
+
+# Назначаем политики роли
+resource "aws_iam_role_policy_attachment" "github_actions_role_policy_attachments" {
+  for_each   = toset(local.policies)
+  policy_arn = each.value
+  role       = aws_iam_role.github_actions_role.name
 }
