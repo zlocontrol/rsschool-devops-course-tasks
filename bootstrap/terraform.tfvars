@@ -13,7 +13,7 @@ github_repo_name = "rsschool-devops-course-tasks"
 
 
 project_name   = "rsschool"
-environment    = "dev"
+environment    = "prod"
 s3_bucket_name = "tfstate-rsschool"
 
 owner = "rsschool"

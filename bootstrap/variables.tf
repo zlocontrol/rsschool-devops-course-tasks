@@ -60,6 +60,6 @@ variable "owner" {
 variable "create_oidc_provider" {
   description = "Create GitHub OIDC provider?"
   type        = bool
-  default     = true
+  default     = false
 }
 
