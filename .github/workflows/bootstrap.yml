@@ -64,7 +64,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_ADMIN_PAT }}
         run: |
-          SANITIZED_ENV=$(echo "${TF_ENV}" | tr '/-' '_' | tr -cd '[:alnum:]_')
+
+          RAW_ENV=$(echo "$TF_ENV" | awk -F'/' '{print $NF}')
+          SANITIZED_ENV=$(echo "$RAW_ENV" | tr '/-' '_' | tr -cd '[:alnum:]_' | tr '[:lower:]' '[:upper:]')
+
           
           TF_BUCKET=$(terraform output -raw s3_bucket_name)
           GH_ROLE=$(terraform output -raw github_role_arn)
