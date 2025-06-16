@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - task_1
+      - task_*
   pull_request:
     branches:
       - main
@@ -17,6 +17,8 @@ permissions:
 env:
   TERRAFORM_VERSION: "1.6.6"
   AWS_REGION: "us-east-1"
+  TF_ENV: "dev"
+  TF_ROOT: "./"
 
 jobs:
   terraform-check:
@@ -44,23 +46,49 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GithubActionsRole
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GithubActionsRole-${{ env.TF_ENV }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Generate backend.tf
+        working-directory: ${{ env.TF_ROOT }}
+        run: |
+          echo "terraform {
+            backend \"s3\" {
+              bucket  = \"${{ secrets.TF_BUCKET_NAME_${{ env.TF_ENV }} }}\"
+              key     = \"${{ env.TF_ENV }}/terraform.tfstate\"
+              region  = \"${{ env.AWS_REGION }}\"
+              encrypt = true
+            }
+          }" > backend.tf
+
+      - name: Check tfvars file exists
+        working-directory: ${{ env.TF_ROOT }}
+        run: |
+          FILE="terraform.${{ env.TF_ENV }}.tfvars"
+          if [ ! -f "$FILE" ]; then
+            echo "ERROR: $FILE not found"
+            exit 1
+          fi
+
       - run: terraform init
+        working-directory: ${{ env.TF_ROOT }}
+
       - run: terraform validate -no-color
-      - run: terraform plan -no-color -input=false -out=tfplan
+        working-directory: ${{ env.TF_ROOT }}
+
+      - run: terraform plan -no-color -input=false -out=tfplan -var-file="terraform.${{ env.TF_ENV }}.tfvars"
+        working-directory: ${{ env.TF_ROOT }}
+
       - name: Upload tfplan artifact
         uses: actions/upload-artifact@v4
         with:
           name: tfplan
           path: tfplan
 
-
   terraform-apply:
     name: Terraform Apply
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-#    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: terraform-plan
     steps:
       - uses: actions/checkout@v4
@@ -71,13 +99,28 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GithubActionsRole
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GithubActionsRole-${{ env.TF_ENV }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Generate backend.tf
+        working-directory: ${{ env.TF_ROOT }}
+        run: |
+          echo "terraform {
+            backend \"s3\" {
+              bucket  = \"${{ secrets.TF_BUCKET_NAME_${{ env.TF_ENV }} }}\"
+              key     = \"${{ env.TF_ENV }}/terraform.tfstate\"
+              region  = \"${{ env.AWS_REGION }}\"
+              encrypt = true
+            }
+          }" > backend.tf
+
       - run: terraform init
+        working-directory: ${{ env.TF_ROOT }}
+
       - name: Download tfplan artifact
         uses: actions/download-artifact@v4
         with:
           name: tfplan
 
       - run: terraform apply -auto-approve tfplan
+        working-directory: ${{ env.TF_ROOT }}
