@@ -55,11 +55,7 @@ variable "s3_bucket_name" {
   type        = string
 }
 
-# Название DynamoDB таблицы для блокировки стейта
-variable "dynamodb_table_name" {
-  description = "Name of the DynamoDB table used for Terraform state locking"
-  type        = string
-}
+
 
 # Общие теги (словарь key = value)
 variable "common_tags" {
