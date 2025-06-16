@@ -17,9 +17,7 @@ resource "aws_iam_openid_connect_provider" "github" {
 
 # Local variable with ARN
 locals {
-  oidc_provider_arn = can(data.aws_iam_openid_connect_provider.existing.arn) ?
-    data.aws_iam_openid_connect_provider.existing.arn :
-    aws_iam_openid_connect_provider.github[0].arn
+  oidc_provider_arn = can(data.aws_iam_openid_connect_provider.existing.arn) ? data.aws_iam_openid_connect_provider.existing.arn : aws_iam_openid_connect_provider.github[0].arn
 
   policies = [
     "arn:aws:iam::aws:policy/AmazonEC2FullAccess",
@@ -31,3 +29,4 @@ locals {
     "arn:aws:iam::aws:policy/AmazonEventBridgeFullAccess",
   ]
 }
+
