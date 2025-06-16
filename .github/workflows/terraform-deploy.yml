@@ -38,6 +38,11 @@ jobs:
     name: Terraform Plan
     runs-on: ubuntu-latest
     needs: terraform-check
+    env:
+      TF_BUCKET_NAME_dev: ${{ secrets.TF_BUCKET_NAME_dev }}
+      GH_ROLE_ARN_dev: ${{ secrets.GH_ROLE_ARN_dev }}
+      TF_BUCKET_NAME_prod: ${{ secrets.TF_BUCKET_NAME_prod }}
+      GH_ROLE_ARN_prod: ${{ secrets.GH_ROLE_ARN_prod }}
     steps:
       - uses: actions/checkout@v4
 
@@ -99,6 +104,11 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     needs: terraform-plan
+    env:
+      TF_BUCKET_NAME_dev: ${{ secrets.TF_BUCKET_NAME_dev }}
+      GH_ROLE_ARN_dev: ${{ secrets.GH_ROLE_ARN_dev }}
+      TF_BUCKET_NAME_prod: ${{ secrets.TF_BUCKET_NAME_prod }}
+      GH_ROLE_ARN_prod: ${{ secrets.GH_ROLE_ARN_prod }}
     steps:
       - uses: actions/checkout@v4
 
