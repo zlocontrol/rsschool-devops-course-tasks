@@ -45,9 +45,17 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
+      - name: Export dynamic secrets
+        run: |
+          echo "Exporting secrets for env: $TF_ENV"
+          bucket_var="TF_BUCKET_NAME_${TF_ENV}"
+          role_var="GH_ROLE_ARN_${TF_ENV}"
+          echo "TF_BUCKET_NAME=${!bucket_var}" >> $GITHUB_ENV
+          echo "GH_ROLE_ARN=${!role_var}" >> $GITHUB_ENV
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GithubActionsRole-${{ env.TF_ENV }}
+          role-to-assume: ${{ env.GH_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Generate backend.tf
@@ -55,9 +63,9 @@ jobs:
         run: |
           echo "terraform {
             backend \"s3\" {
-              bucket  = \"${{ secrets.TF_BUCKET_NAME_${{ env.TF_ENV }} }}\"
-              key     = \"${{ env.TF_ENV }}/terraform.tfstate\"
-              region  = \"${{ env.AWS_REGION }}\"
+              bucket  = \"$TF_BUCKET_NAME\"
+              key     = \"$TF_ENV/terraform.tfstate\"
+              region  = \"$AWS_REGION\"
               encrypt = true
             }
           }" > backend.tf
@@ -65,7 +73,7 @@ jobs:
       - name: Check tfvars file exists
         working-directory: ${{ env.TF_ROOT }}
         run: |
-          FILE="terraform.${{ env.TF_ENV }}.tfvars"
+          FILE="terraform.${TF_ENV}.tfvars"
           if [ ! -f "$FILE" ]; then
             echo "ERROR: $FILE not found"
             exit 1
@@ -77,7 +85,7 @@ jobs:
       - run: terraform validate -no-color
         working-directory: ${{ env.TF_ROOT }}
 
-      - run: terraform plan -no-color -input=false -out=tfplan -var-file="terraform.${{ env.TF_ENV }}.tfvars"
+      - run: terraform plan -no-color -input=false -out=tfplan -var-file="terraform.${TF_ENV}.tfvars"
         working-directory: ${{ env.TF_ROOT }}
 
       - name: Upload tfplan artifact
@@ -98,9 +106,17 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
+      - name: Export dynamic secrets
+        run: |
+          echo "Exporting secrets for env: $TF_ENV"
+          bucket_var="TF_BUCKET_NAME_${TF_ENV}"
+          role_var="GH_ROLE_ARN_${TF_ENV}"
+          echo "TF_BUCKET_NAME=${!bucket_var}" >> $GITHUB_ENV
+          echo "GH_ROLE_ARN=${!role_var}" >> $GITHUB_ENV
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GithubActionsRole-${{ env.TF_ENV }}
+          role-to-assume: ${{ env.GH_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Generate backend.tf
@@ -108,9 +124,9 @@ jobs:
         run: |
           echo "terraform {
             backend \"s3\" {
-              bucket  = \"${{ secrets.TF_BUCKET_NAME_${{ env.TF_ENV }} }}\"
-              key     = \"${{ env.TF_ENV }}/terraform.tfstate\"
-              region  = \"${{ env.AWS_REGION }}\"
+              bucket  = \"$TF_BUCKET_NAME\"
+              key     = \"$TF_ENV/terraform.tfstate\"
+              region  = \"$AWS_REGION\"
               encrypt = true
             }
           }" > backend.tf
