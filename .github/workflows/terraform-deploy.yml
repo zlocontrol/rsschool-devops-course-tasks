@@ -5,7 +5,7 @@ on:
     branches:
       - main
       - task_*
-      - create*
+      - create/*
 
 
   pull_request:
