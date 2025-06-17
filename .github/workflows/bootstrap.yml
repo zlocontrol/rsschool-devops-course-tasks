@@ -3,7 +3,7 @@ name: Bootstrap Infra and GitHub Role
 on:
   push:
     branches:
-      - 'create/**'
+      - 'create/vse'
   workflow_dispatch:
     inputs:
       tf_env:
