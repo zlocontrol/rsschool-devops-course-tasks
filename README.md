@@ -125,3 +125,69 @@ It includes 3 jobs:
 
 task_2
 
+
+What does this project do?
+This Terraform project deploys the following AWS infrastructure:
+
+Identity and Access Management (IAM):
+Creates an IAM group named rs.school.
+Attaches several standard AWS full-access policies (e.g., AmazonEC2FullAccess, AmazonS3FullAccess, IAMFullAccess, and others) to this group to provide broad permissions for development purposes.
+Creates an IAM user my_user_task1 and adds it to the rs.school group.
+Terraform State Storage:
+Creates an S3 bucket (terraform_state) for reliable remote storage of Terraform state.
+Enables versioning for this bucket, ensuring the ability to roll back to previous states and protection against accidental deletion.
+Compute Resources (EC2):
+Deploys a Bastion/NAT Instance (vm-bastion-nat): this is a public VM (with a public IP) that serves as an entry point to the private network (bastion) and as a NAT gateway for private resources, allowing them to initiate outbound connections to the internet without a direct public IP. Source/destination checking (source_dest_check) is disabled for this instance.
+Deploys a Public VM (vm-public-vm): this is a VM with a public IP, located in a public subnet.
+Deploys two Private VMs (vm-private-vm-1, vm-private-vm-2): these VMs are located in private subnets, do not have a direct public IP, and access the internet via the Bastion/NAT Instance.
+Networking Components (VPC, NACLs, Security Groups):
+Configures Network Access Control Lists (NACLs) for public and private subnets, defining rules for inbound and outbound traffic (SSH, ICMP, ephemeral ports, VPC internal traffic).
+Configures Security Groups for each VM group (Bastion/NAT, Public, Private), controlling traffic at the instance level. For example, private VMs are only accessible via SSH from the bastion host.
+Creates routes for private subnets, directing all outbound traffic through the NAT Instance.
+Connecting to Hosts using SSH Agent
+For secure and convenient connection to your EC2 instances, it is recommended to use ssh-agent. This allows you to load your private key once and use it for all subsequent SSH connections without needing to enter a password or specify the key file path each time.
+
+Prerequisites:
+
+Before deploying the infrastructure, you must create two SSH key pairs in AWS:
+
+A key for bastion-key (to be used for the Bastion/NAT Instance).
+A key for vm-key (to be used for the Public and Private VMs).
+Ensure that the public parts of these keys (.pub files) are correctly imported into AWS EC2. The private parts of the keys (.pem files) should be stored locally.
+
+Connection Steps:
+
+Start ssh-agent:
+
+Bash
+
+eval "$(ssh-agent -s)"
+(On Windows, use Git Bash or WSL for this command. In PowerShell, the command will be Start-SshAgent followed by ssh-add.)
+
+Add your private keys to ssh-agent:
+
+Bash
+
+ssh-add /path/to/your/bastion-key.pem
+ssh-add /path/to/your/vm-key.pem
+Replace /path/to/your/ with the actual path to your .pem files.
+
+Connect to the Bastion/NAT Instance:
+First, you need to connect to the bastion host using its public DNS name, which will be assigned by AWS after Terraform deployment.
+
+Bash
+
+ssh -A ec2-user@<Public_DNS_Name_of_Bastion_NAT_VM>
+The -A flag is crucial as it enables agent forwarding, allowing you to use the same SSH key for subsequent connections from the bastion host to other private VMs.
+ec2-user is the default username for Amazon Linux-based AMIs. If you are using a different AMI, the username may vary (e.g., ubuntu, centos, admin).
+From the Bastion Host, connect to Private/Public VMs:
+Once successfully connected to the bastion host, you can use it to access internal VMs using their private DNS names or IP addresses. Thanks to ssh-agent forwarding, 
+you do not need to copy the private key to the bastion host.
+
+Bash
+
+# From the bastion host
+ssh ec2-user@<internal_public_vm_private_ip>
+ssh ec2-user@<private_vm_private_ips >
+ssh ec2-user@<private_vm_private_ips >
+Note: We are utilizing the free DNS names provided by AWS for our EC2 instances, and NOT Elastic IPs, which incur charges under certain usage conditions.

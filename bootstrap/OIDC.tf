@@ -1,8 +1,8 @@
-# Получаем ID текущего AWS аккаунта
+# Get the ID of the current AWS account
 data "aws_caller_identity" "current" {}
 
 
-# Пытаемся создать OIDC провайдер (если он ещё не существует)
+# We are trying to create an OIDC provider (if it does not exist yet)
 resource "aws_iam_openid_connect_provider" "github" {
   count           = var.create_oidc_provider ? 1 : 0
   url             = "https://token.actions.githubusercontent.com"
@@ -10,14 +10,14 @@ resource "aws_iam_openid_connect_provider" "github" {
   thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780fa86"] # ВОЗВРАЩЕНО: thumbprint_list обязателен!
 }
 
-# Получаем ARN существующего OIDC провайдера, если он НЕ создается этим кодом.
-# Это ключевой момент для повторных запусков, когда create_oidc_provider = false.
+# Get the ARN of an existing OIDC provider if it is NOT created by this code.
+#
 data "aws_iam_openid_connect_provider" "github_existing" {
   count = var.create_oidc_provider ? 0 : 1 # Загружаем только если create_oidc_provider = false
   url   = "https://token.actions.githubusercontent.com"
 }
 
-# Общие локальные значения
+# General local values
 locals {
   oidc_provider_arn = var.create_oidc_provider ? (
     aws_iam_openid_connect_provider.github[0].arn
