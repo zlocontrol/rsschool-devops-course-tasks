@@ -36,9 +36,10 @@ jobs:
           else
             # refs/heads/destroy-infra/dev → dev
             REF="${GITHUB_REF#refs/heads/}"
-            ENV_NAME="${REF##*/}"
+            ENV_NAME="${REF#destroy-infra/}"
             echo "TF_ENV=$ENV_NAME" >> $GITHUB_ENV
           fi
+
 
       - name: Checkout repository
         uses: actions/checkout@v4
