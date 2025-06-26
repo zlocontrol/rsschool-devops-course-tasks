@@ -4,7 +4,7 @@ on:
   # Trigger on push to a specific branch pattern, e.g., 'destroy-infra/dev'
   push:
     branches:
-      - 'destroy-infra/*'
+      - 'destroy-infra'
   # Allow manual trigger to specify the environment
   workflow_dispatch:
     inputs:
