@@ -1,11 +1,12 @@
 name: Terraform AWS Destroy
 
 on:
-  # Trigger on push to a specific branch pattern, e.g., 'destroy-infra/dev'
+
   push:
     branches:
-      - 'destroy-infra'
-  # Allow manual trigger to specify the environment
+      - 'destroy-infra/**'
+
+
   workflow_dispatch:
     inputs:
       tf_env:
@@ -13,13 +14,13 @@ on:
         required: true
 
 permissions:
-  id-token: write # Required for OIDC role assumption
-  contents: read  # Required for checking out the code
+  id-token: write
+  contents: read
 
 env:
   TERRAFORM_VERSION: "1.6.6"
   AWS_REGION: "us-east-1"
-  TF_ROOT: "./" # Root directory where your Terraform code resides
+  TF_ROOT: "./"
 
 jobs:
   terraform-destroy:
@@ -33,8 +34,10 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "TF_ENV=${{ github.event.inputs.tf_env }}" >> $GITHUB_ENV
           else
-            BRANCH="${GITHUB_REF##*/}"
-            echo "TF_ENV=$BRANCH" >> $GITHUB_ENV
+            # refs/heads/destroy-infra/dev → dev
+            REF="${GITHUB_REF#refs/heads/}"
+            ENV_NAME="${REF##*/}"
+            echo "TF_ENV=$ENV_NAME" >> $GITHUB_ENV
           fi
 
       - name: Checkout repository
@@ -53,22 +56,22 @@ jobs:
           GH_ROLE_ARN_prod: ${{ secrets.GH_ROLE_ARN_prod }}
         run: |
           echo "Determining secrets for environment: $TF_ENV"
-          
+
           bucket_secret_name="TF_BUCKET_NAME_${TF_ENV}"
           role_secret_name="GH_ROLE_ARN_${TF_ENV}"
 
           if [[ -z "${!bucket_secret_name}" ]]; then
-            echo "::error::Secret ${bucket_secret_name} not found for environment ${TF_ENV}!"
+            echo "::error::Secret ${bucket_secret_name} not found!"
             exit 1
           fi
           if [[ -z "${!role_secret_name}" ]]; then
-            echo "::error::Secret ${role_secret_name} not found for environment ${TF_ENV}!"
+            echo "::error::Secret ${role_secret_name} not found!"
             exit 1
           fi
 
           echo "TF_BUCKET_NAME=${!bucket_secret_name}" >> $GITHUB_ENV
           echo "GH_ROLE_ARN=${!role_secret_name}" >> $GITHUB_ENV
-          echo "Successfully exported TF_BUCKET_NAME and GH_ROLE_ARN for $TF_ENV."
+          echo "Successfully exported secrets."
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -87,14 +90,13 @@ jobs:
               encrypt = true
             }
           }" > backend.tf
-          echo "Generated backend.tf for bucket: $TF_BUCKET_NAME and key: $TF_ENV/terraform.tfstate"
 
       - name: Check tfvars file exists
         working-directory: ${{ env.TF_ROOT }}
         run: |
           FILE="terraform.${TF_ENV}.tfvars"
           if [ ! -f "$FILE" ]; then
-            echo "ERROR: Terraform variables file '$FILE' not found. Cannot destroy infrastructure without environment-specific variables."
+            echo "::error::File '$FILE' not found. Cannot continue."
             exit 1
           fi
           echo "Using tfvars file: $FILE"
