@@ -1,0 +1,127 @@
+name: Terraform AWS Destroy
+
+on:
+  # Trigger on push to a specific branch pattern, e.g., 'destroy-infra/dev'
+  push:
+    branches:
+      - 'destroy-infra/*'
+  # Allow manual trigger to specify the environment
+  workflow_dispatch:
+    inputs:
+      tf_env:
+        description: 'Terraform environment to destroy (e.g., dev, prod)'
+        required: true
+
+permissions:
+  id-token: write # Required for OIDC role assumption
+  contents: read  # Required for checking out the code
+
+env:
+  TERRAFORM_VERSION: "1.6.6"
+  AWS_REGION: "us-east-1"
+  # Determine TF_ENV based on the trigger type:
+  # - If manually dispatched, use the provided input.
+  # - If pushed to 'destroy-infra/*' branch, extract the environment name from the branch.
+  TF_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tf_env || split(github.ref, '/')[2] }}
+  TF_ROOT: "./" # Root directory where your Terraform code resides
+
+jobs:
+  terraform-destroy:
+    name: Terraform Destroy Environment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Export dynamic secrets
+        # These environment variables make secrets available for dynamic lookup in the shell script.
+        # They correspond to the secrets set by the bootstrap workflow.
+        env:
+          TF_BUCKET_NAME_dev: ${{ secrets.TF_BUCKET_NAME_dev }}
+          GH_ROLE_ARN_dev: ${{ secrets.GH_ROLE_ARN_dev }}
+          TF_BUCKET_NAME_prod: ${{ secrets.TF_BUCKET_NAME_prod }}
+          GH_ROLE_ARN_prod: ${{ secrets.GH_ROLE_ARN_prod }}
+        run: |
+          echo "Determining secrets for environment: $TF_ENV"
+          
+          # Construct dynamic secret names based on TF_ENV
+          bucket_secret_name="TF_BUCKET_NAME_${TF_ENV}"
+          role_secret_name="GH_ROLE_ARN_${TF_ENV}"
+
+          # Use indirect expansion (!!) to get the value of the dynamically named variable.
+          # Example: If bucket_secret_name is "TF_BUCKET_NAME_dev", ${!bucket_secret_name}
+          # will resolve to the value of TF_BUCKET_NAME_dev.
+          # Check if the secrets are set and export them to GITHUB_ENV for subsequent steps.
+          if [[ -z "${!bucket_secret_name}" ]]; then
+            echo "::error::Secret ${bucket_secret_name} not found for environment ${TF_ENV}!"
+            exit 1
+          fi
+          if [[ -z "${!role_secret_name}" ]]; then
+            echo "::error::Secret ${role_secret_name} not found for environment ${TF_ENV}!"
+            exit 1
+          fi
+
+          echo "TF_BUCKET_NAME=${!bucket_secret_name}" >> $GITHUB_ENV
+          echo "GH_ROLE_ARN=${!role_secret_name}" >> $GITHUB_ENV
+          echo "Successfully exported TF_BUCKET_NAME and GH_ROLE_ARN for $TF_ENV."
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.GH_ROLE_ARN }} # Assume the OIDC role for the specific environment
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Generate backend.tf
+        working-directory: ${{ env.TF_ROOT }}
+        run: |
+          # Dynamically create the backend.tf file to point to the correct S3 state bucket
+          echo "terraform {
+            backend \"s3\" {
+              bucket  = \"$TF_BUCKET_NAME\"
+              key     = \"$TF_ENV/terraform.tfstate\"
+              region  = \"$AWS_REGION\"
+              encrypt = true
+            }
+          }" > backend.tf
+          echo "Generated backend.tf for bucket: $TF_BUCKET_NAME and key: $TF_ENV/terraform.tfstate"
+
+      - name: Check tfvars file exists
+        working-directory: ${{ env.TF_ROOT }}
+        run: |
+          # Ensure the environment-specific tfvars file exists, which is crucial for destroy operations.
+          FILE="terraform.${TF_ENV}.tfvars"
+          if [ ! -f "$FILE" ]; then
+            echo "ERROR: Terraform variables file '$FILE' not found. Cannot destroy infrastructure without environment-specific variables."
+            exit 1
+          fi
+          echo "Using tfvars file: $FILE"
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_ROOT }}
+        run: terraform init
+
+      - name: Terraform Plan (Destroy)
+        working-directory: ${{ env.TF_ROOT }}
+        # Generate a destroy plan. This is a crucial safety step to review what will be deleted.
+        run: terraform plan -destroy -no-color -input=false -out=tfplan-destroy -var-file="terraform.${TF_ENV}.tfvars"
+
+      - name: Upload tfplan-destroy artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-destroy
+          path: tfplan-destroy
+          retention-days: 1 # Optional: retain artifact for a short period
+
+      - name: Terraform Destroy
+        working-directory: ${{ env.TF_ROOT }}
+        # Apply the destroy plan.
+        # WARNING: -auto-approve means no manual confirmation. Use with extreme caution.
+        # For production environments, consider adding a manual approval step via GitHub Environments
+        # or requiring a separate, explicit trigger for the apply phase.
+        run: terraform apply -destroy -auto-approve tfplan-destroy
