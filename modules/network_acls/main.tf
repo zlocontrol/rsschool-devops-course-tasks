@@ -60,31 +60,31 @@ resource "aws_network_acl_rule" "public_nacl_ingress_icmp" {
 
 # Rule for HTTP/HTTPS (if you have web servers in public subnets like internal_public_vm for web hosting)
 #
-/*
+
 resource "aws_network_acl_rule" "public_nacl_ingress_http" {
   network_acl_id = aws_network_acl.public_nacl.id
-  rule_number    = 110
+  rule_number    = 112
   egress         = false
   protocol       = "tcp"
   from_port      = 80
   to_port        = 80
   cidr_block     = "0.0.0.0/0"
   rule_action    = "allow"
-  description    = "Allow HTTP from Internet"
+  # description    = "Allow HTTP from Internet"
 }
 
 resource "aws_network_acl_rule" "public_nacl_ingress_https" {
   network_acl_id = aws_network_acl.public_nacl.id
-  rule_number    = 120
+  rule_number    = 113
   egress         = false
   protocol       = "tcp"
   from_port      = 443
   to_port        = 443
   cidr_block     = "0.0.0.0/0"
   rule_action    = "allow"
-  description    = "Allow HTTPS from Internet"
+  # description    = "Allow HTTPS from Internet"
 }
-*/
+
 
 
 resource "aws_network_acl_rule" "public_nacl_ingress_ephemeral" {

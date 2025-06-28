@@ -50,7 +50,14 @@ resource "aws_security_group" "private_vm_sg" {
     protocol        = "tcp"
     security_groups = [aws_security_group.bastion_nat_sg.id] # Разрешаем SSH только с объединенного Bastion/NAT
   }
-
+  # aws_security_group "internal_public_vm_sg"
+  ingress {
+    description = "Allow K3s API server port from VPC"
+    from_port   = 6443
+    to_port     = 6443
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
   # Egress rule: Allow all outbound traffic (routed via Bastion-NAT)
   egress {
     description = "Allow all outbound traffic to internet (via NAT)"
@@ -77,6 +84,7 @@ resource "aws_security_group" "internal_public_vm_sg" {
     protocol        = "tcp"
     security_groups = [aws_security_group.bastion_nat_sg.id]
   }
+
 
   # Ingress: Allow all traffic from VPC CIDR (if other internal services need to reach it)
   ingress {
