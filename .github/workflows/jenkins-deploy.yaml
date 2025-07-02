@@ -1,0 +1,91 @@
+name: Deploy Jenkins Application
+
+on:
+  # Allows you to manually run this workflow from the GitHub UI
+  workflow_dispatch:
+  # (опционально) автозапуск после пуша в main или task_*
+  # push:
+  #   branches:
+  #     - main
+  #     - task_*
+
+permissions:
+  id-token: write   # for OIDC is AWS
+  contents: read    # for  checkout
+
+env:
+  AWS_REGION: "us-east-1"      # region
+  TF_ENV:     "dev"            # name env (dev/prod)
+
+jobs:
+  jenkins-deploy:
+    name: Deploy Jenkins via Helm
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.GH_ROLE_ARN_dev }}
+          aws-region:     ${{ env.AWS_REGION }}
+
+      - name: Fetch kubeconfig from SSM Parameter Store
+        run: |
+          aws ssm get-parameter \
+            --name "/${{ env.TF_ENV }}/kubeconfig" \
+            --with-decryption \
+            --region ${{ env.AWS_REGION }} \
+            --query 'Parameter.Value' --output text \
+          > kubeconfig
+
+      - name: Setup Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          mv kubeconfig ~/.kube/config
+          chmod 600 ~/.kube/config
+          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Install Helm
+        uses: azure/setup-helm@v1
+        with:
+          version: 'latest'
+
+      # Minimum wait step for Kubernetes API server availability
+      - name: Wait for Kubernetes API server to be ready
+        run: |
+          echo "Waiting for Kubernetes API Server to be available..."
+          kubectl wait --for=condition=Available apiservice/v1. --timeout=5m || \
+          (echo "API server is unavailable for 5 minutes. Logout." && exit 1)
+          echo "API Kubernetes ready!"
+
+      - name: Add Jenkins Helm repo
+        run: |
+          helm repo add jenkinsci https://charts.jenkins.io
+          helm repo update
+
+      - name: Deploy or Upgrade Jenkins
+        run: |
+          helm upgrade --install jenkins jenkinsci/jenkins \
+            --namespace jenkins \
+            --create-namespace \
+            --wait \
+            --timeout 5m \
+            --set controller.serviceType=NodePort \
+            --set controller.nodePort=30080 \
+            --set persistence.enabled=true \
+            --set persistence.storageClass="" \
+            --set persistence.size=5Gi
+
+      # Helm --wait is already waiting for deployment to be ready,
+      #
+      - name: Verify Jenkins rollout
+        run: |
+          kubectl rollout status deployment/jenkins -n jenkins --timeout=5m
