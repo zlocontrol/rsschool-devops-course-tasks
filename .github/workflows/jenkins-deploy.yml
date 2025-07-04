@@ -14,13 +14,15 @@ on:
       - main
       - task_*
       - create/dev
+
 permissions:
-  id-token: write   # for OIDC is AWS
-  contents: read    # for  checkout
+  id-token: write   # for OIDC in AWS
+  contents: read    # for checkout
 
 env:
-  AWS_REGION: "us-east-1"      # region
-  TF_ENV:     "dev"            # name env (dev/prod)
+  AWS_REGION: "us-west-1"
+  TF_ENV:     "dev"
+  NAME_PREFIX: "my-project-dev"
 
 jobs:
   jenkins-deploy:
@@ -40,7 +42,7 @@ jobs:
       - name: Fetch kubeconfig from SSM Parameter Store
         run: |
           aws ssm get-parameter \
-            --name "/${{ env.TF_ENV }}/kubeconfig" \
+            --name "/${{ env.NAME_PREFIX }}/kubeconfig" \
             --with-decryption \
             --region ${{ env.AWS_REGION }} \
             --query 'Parameter.Value' --output text \
@@ -55,20 +57,15 @@ jobs:
 
       - name: Install kubectl
         uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
 
       - name: Install Helm
         uses: azure/setup-helm@v1
-        with:
-          version: 'latest'
 
-      # Minimum wait step for Kubernetes API server availability
-      - name: Wait for Kubernetes API server to be ready
+      - name: Wait for Kubernetes API server availability
         run: |
           echo "Waiting for Kubernetes API Server to be available..."
           kubectl wait --for=condition=Available apiservice/v1. --timeout=5m || \
-          (echo "API server is unavailable for 5 minutes. Logout." && exit 1)
+          (echo "API server is unavailable for 5 minutes. Exiting." && exit 1)
           echo "API Kubernetes ready!"
 
       - name: Add Jenkins Helm repo
@@ -86,11 +83,9 @@ jobs:
             --set controller.serviceType=NodePort \
             --set controller.nodePort=30080 \
             --set persistence.enabled=true \
-            --set persistence.storageClass="" \
+            --set persistence.storageClass=local-path \
             --set persistence.size=5Gi
 
-      # Helm --wait is already waiting for deployment to be ready,
-      #
       - name: Verify Jenkins rollout
         run: |
           kubectl rollout status deployment/jenkins -n jenkins --timeout=5m
