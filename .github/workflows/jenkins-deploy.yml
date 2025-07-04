@@ -1,14 +1,19 @@
 name: Deploy Jenkins Application
 
+#on:
+#  # Allows you to manually run this workflow from the GitHub UI
+#  workflow_dispatch:
+#  # (опционально) автозапуск после пуша в main или task_*
+#  # push:
+#  #   branches:
+#  #     - main
+#  #     - task_*
 on:
-  # Allows you to manually run this workflow from the GitHub UI
-  workflow_dispatch:
-  # (опционально) автозапуск после пуша в main или task_*
-  # push:
-  #   branches:
-  #     - main
-  #     - task_*
-
+  push:
+    branches:
+      - main
+      - task_*
+      - create/dev
 permissions:
   id-token: write   # for OIDC is AWS
   contents: read    # for  checkout
