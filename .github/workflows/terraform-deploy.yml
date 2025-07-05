@@ -1,53 +1,155 @@
-
 name: Terraform AWS Deploy
 
 on:
   push:
     branches:
       - main
+#      - task_*
+#      - create/prod
+
+
   pull_request:
     branches:
       - main
   workflow_dispatch:
 
-
 permissions:
   id-token: write
   contents: read
 
+env:
+  TERRAFORM_VERSION: "1.6.6"
+  AWS_REGION: "us-east-1"
+  TF_ENV: "dev"
+  TF_ROOT: "./"
+
 jobs:
-  terraform:
-    name: "Terraform Apply to AWS"
+  terraform-check:
+    name: Terraform Format Check
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: hashicorp/setup-terraform@v3
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GithubActionsRole
-          aws-region: us-east-1
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive
+
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: terraform-check
+    env:
+      TF_BUCKET_NAME_dev: ${{ secrets.TF_BUCKET_NAME_dev }}
+      GH_ROLE_ARN_dev: ${{ secrets.GH_ROLE_ARN_dev }}
+      TF_BUCKET_NAME_prod: ${{ secrets.TF_BUCKET_NAME_prod }}
+      GH_ROLE_ARN_prod: ${{ secrets.GH_ROLE_ARN_prod }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.x
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - name: Terraform Init
-        id: init
-        run: terraform init
+      - name: Export dynamic secrets
+        run: |
+          echo "Exporting secrets for env: $TF_ENV"
+          bucket_var="TF_BUCKET_NAME_${TF_ENV}"
+          role_var="GH_ROLE_ARN_${TF_ENV}"
+          echo "TF_BUCKET_NAME=${!bucket_var}" >> $GITHUB_ENV
+          echo "GH_ROLE_ARN=${!role_var}" >> $GITHUB_ENV
 
-      - name: Terraform Validate
-        id: validate
-        run: terraform validate -no-color
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.GH_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Plan
-        id: plan
-        run: terraform plan -no-color -input=false -out=tfplan
+      - name: Generate backend.tf
+        working-directory: ${{ env.TF_ROOT }}
+        run: |
+          echo "terraform {
+            backend \"s3\" {
+              bucket  = \"$TF_BUCKET_NAME\"
+              key     = \"$TF_ENV/terraform.tfstate\"
+              region  = \"$AWS_REGION\"
+              encrypt = true
+            }
+          }" > backend.tf
 
-      - name: Terraform Apply
-        id: apply
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: terraform apply -auto-approve tfplan
+      - name: Check tfvars file exists
+        working-directory: ${{ env.TF_ROOT }}
+        run: |
+          FILE="terraform.${TF_ENV}.tfvars"
+          if [ ! -f "$FILE" ]; then
+            echo "ERROR: $FILE not found"
+            exit 1
+          fi
+
+      - run: terraform init
+        working-directory: ${{ env.TF_ROOT }}
+
+      - run: terraform validate -no-color
+        working-directory: ${{ env.TF_ROOT }}
+
+      - run: terraform plan -no-color -input=false -out=tfplan -var-file="terraform.${TF_ENV}.tfvars"
+        working-directory: ${{ env.TF_ROOT }}
+
+      - name: Upload tfplan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: tfplan
+
+  terraform-apply:
+    name: Terraform Apply
+#    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    env:
+      TF_BUCKET_NAME_dev: ${{ secrets.TF_BUCKET_NAME_dev }}
+      GH_ROLE_ARN_dev: ${{ secrets.GH_ROLE_ARN_dev }}
+      TF_BUCKET_NAME_prod: ${{ secrets.TF_BUCKET_NAME_prod }}
+      GH_ROLE_ARN_prod: ${{ secrets.GH_ROLE_ARN_prod }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Export dynamic secrets
+        run: |
+          echo "Exporting secrets for env: $TF_ENV"
+          bucket_var="TF_BUCKET_NAME_${TF_ENV}"
+          role_var="GH_ROLE_ARN_${TF_ENV}"
+          echo "TF_BUCKET_NAME=${!bucket_var}" >> $GITHUB_ENV
+          echo "GH_ROLE_ARN=${!role_var}" >> $GITHUB_ENV
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.GH_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Generate backend.tf
+        working-directory: ${{ env.TF_ROOT }}
+        run: |
+          echo "terraform {
+            backend \"s3\" {
+              bucket  = \"$TF_BUCKET_NAME\"
+              key     = \"$TF_ENV/terraform.tfstate\"
+              region  = \"$AWS_REGION\"
+              encrypt = true
+            }
+          }" > backend.tf
+
+      - run: terraform init
+        working-directory: ${{ env.TF_ROOT }}
+
+      - name: Download tfplan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+
+      - run: terraform apply -auto-approve tfplan
+        working-directory: ${{ env.TF_ROOT }}

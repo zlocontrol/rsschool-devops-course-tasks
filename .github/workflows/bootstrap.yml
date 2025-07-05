@@ -1,0 +1,87 @@
+name: Bootstrap Infra and GitHub Role
+
+on:
+  push:
+    branches:
+      - 'create/vse'
+  workflow_dispatch:
+    inputs:
+      tf_env:
+        description: 'Terraform environment (e.g. dev, prod)'
+        required: true
+        default: 'dev'
+
+permissions:
+  id-token: write
+  contents: read
+
+
+
+env:
+  TERRAFORM_VERSION: "1.6.6"
+  AWS_REGION: "us-east-1"
+  TF_ENV: ${{ github.event.inputs.tf_env || github.ref_name }}
+
+jobs:
+  bootstrap:
+    name: Create S3 Bucket & IAM Role
+    runs-on: ubuntu-latest
+
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+
+      - name: Configure AWS credentials (Access Keys for bootstrap)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.BOOTSTRAP_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.BOOTSTRAP_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install Terraform & GitHub CLI
+        run: |
+          sudo apt-get update && sudo apt-get install -y unzip curl jq gh
+          curl -fsSL https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip -o terraform.zip
+          unzip terraform.zip
+          sudo mv terraform /usr/local/bin/
+
+      - name: Terraform Init (no backend)
+        working-directory: bootstrap
+        run: terraform init -backend=false
+
+      - name: Terraform Apply (create resources)
+        working-directory: bootstrap
+        run: terraform apply -auto-approve -var-file="terraform.tfvars"
+
+
+
+
+
+      - name: Extract terraform outputs and save to GitHub Secrets
+        working-directory: bootstrap
+        env:
+          GH_TOKEN: ${{ secrets.GH_ADMIN_PAT }}
+        run: |
+
+          RAW_ENV=$(echo "$TF_ENV" | awk -F'/' '{print $NF}')
+          SANITIZED_ENV=$(echo "$RAW_ENV" | tr '/-' '_' | tr -cd '[:alnum:]_' | tr '[:lower:]' '[:upper:]')
+
+          
+          TF_BUCKET=$(terraform output -raw s3_bucket_name)
+          GH_ROLE=$(terraform output -raw github_role_arn)
+          
+          echo "::add-mask::$TF_BUCKET"
+          echo "::add-mask::$GH_ROLE"
+          
+          echo "TF_BUCKET=$TF_BUCKET"
+          echo "GH_ROLE=$GH_ROLE"
+          echo "ENV=$SANITIZED_ENV"
+          
+          gh secret set TF_BUCKET_NAME_${SANITIZED_ENV} --body "$TF_BUCKET" --repo "${GITHUB_REPOSITORY}"
+          gh secret set GH_ROLE_ARN_${SANITIZED_ENV} --body "$GH_ROLE" --repo "${GITHUB_REPOSITORY}"
+     
+      
+      
+

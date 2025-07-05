@@ -1,0 +1,133 @@
+
+name: Deploy Jenkins Application
+
+
+on:
+  push:
+    branches:
+      - main
+      - task_*
+      - create/dev
+#on:
+#  # Allows you to manually run this workflow from the GitHub UI
+#  workflow_dispatch:
+#  # (опционально) автозапуск после пуша в main или task_*
+#   push:
+#     branches:
+#       - main
+#       - task_*
+#on:
+#  workflow_run:
+#    workflows: ["Terraform AWS Deploy"]
+#    types: [completed]
+  #
+  # push:
+  #   branches:
+  #     - main
+  #     - task_*
+  #     - create/dev
+
+permissions:
+  id-token: write   # for OIDC in AWS
+  contents: read    # for checkout
+
+env:
+  AWS_REGION: "us-west-1"
+  TF_ENV:     "dev"
+  NAME_PREFIX: "my-project-dev"
+
+jobs:
+  jenkins-deploy:
+    name: Deploy Jenkins via Helm
+    runs-on: [self-hosted, Linux, X64]
+#    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+
+      - name: Wait for infrastructure to settle
+        run: |
+          echo "Waiting 40 seconds for infrastructure to settle..."
+          sleep 5
+          
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+
+      - name: Install AWS CLI (self-hosted)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y unzip curl
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          sudo ./aws/install
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.GH_ROLE_ARN_dev }}
+          aws-region:     ${{ env.AWS_REGION }}
+
+      - name: Fetch kubeconfig from SSM Parameter Store
+        run: |
+          aws ssm get-parameter \
+            --name "/${{ env.NAME_PREFIX }}/kubeconfig" \
+            --with-decryption \
+            --region ${{ env.AWS_REGION }} \
+            --query 'Parameter.Value' --output text \
+          > kubeconfig
+
+      - name: Setup Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          mv kubeconfig ~/.kube/config
+          chmod 600 ~/.kube/config
+          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Install Helm
+        uses: azure/setup-helm@v1
+        with:
+          version: v3.14.0
+
+      - name: Check Helm version
+        run: helm version
+
+      - name: Ensure Helm repo dirs
+        run: |
+          mkdir -p ~/.config/helm
+          mkdir -p ~/.cache/helm
+
+      - name: Add Jenkins Helm repo
+        run: |
+          helm repo add jenkinsci https://charts.jenkins.io
+          helm repo update
+      
+
+      - name: Wait for Kubernetes API server availability
+        run: |
+          echo "Waiting for Kubernetes API Server to be available..."
+          kubectl wait --for=condition=Available apiservice/v1. --timeout=5m || \
+          (echo "API server is unavailable for 5 minutes. Exiting." && exit 1)
+          echo "API Kubernetes ready!"
+
+      - name: Add Jenkins Helm repo
+        run: |
+          helm repo add jenkinsci https://charts.jenkins.io
+          helm repo update
+
+      - name: Deploy or Upgrade Jenkins
+        run: |
+          helm upgrade --install jenkins jenkinsci/jenkins \
+           --namespace jenkins \
+           --create-namespace \
+           --wait \
+           --timeout 10m \
+           -f jenkins/values.yaml
+  
+
+      - name: Verify Jenkins rollout
+        run: |
+          kubectl rollout status sts/jenkins -n jenkins --timeout=5m
+      
