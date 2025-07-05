@@ -9,7 +9,7 @@ controller:
 
   persistence:
     enabled: true
-    storageClass: "local-path"  # Для k3s с Local Path Provisioner
+    storageClass: "local-path"
     accessMode: ReadWriteOnce
     size: 5Gi
 
@@ -17,9 +17,7 @@ controller:
     enabled: true
     configScripts:
       my-jcasc: |
-        # === ИСПРАВЛЕНО: Удален блок 'jenkins:' и 'systemMessage:' ===
-        # Это устраняет конфликт с конфигурацией по умолчанию.
-        # 'jobs:' теперь является ключом верхнего уровня в этом JCasC YAML.
+        jenkins:
         jobs:
           - script: >
               pipelineJob('hello-world') {
