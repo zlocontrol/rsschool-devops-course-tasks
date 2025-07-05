@@ -1,5 +1,3 @@
-
-
 controller:
   image:
     registry: docker.io
@@ -19,7 +17,15 @@ controller:
     enabled: true
     configScripts:
       my-jcasc: |
-        jenkins:
+        # === КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: jobs: теперь является ключом верхнего уровня в JCasC YAML ===
+        # Обратите внимание на отступы!
+        jenkins: # Этот блок содержит общие настройки Jenkins
+          # Если у вас есть другие настройки Jenkins (например, systemMessage), они должны быть здесь.
+          # systemMessage: "Configured via JCasC" # Можно добавить, если хотите, но может конфликтовать.
+        
+        # === ЭТО ПРАВИЛЬНАЯ ПОЗИЦИЯ ДЛЯ JOBS ===
+        # Jobs должен быть на том же уровне отступа, что и "jenkins:" в JCasC YAML.
+        # То есть, "jobs:" должен начинаться с того же отступа, что и "jenkins:".
         jobs:
           - script: >
               pipelineJob('hello-world') {
@@ -29,3 +35,6 @@ controller:
                   }
                 }
               }
+        
+        # Если у вас были другие секции JCasC (например, security, clouds, unclassified),
+        # они также должны быть здесь, на том же уровне, что и "jenkins:" и "jobs:".
