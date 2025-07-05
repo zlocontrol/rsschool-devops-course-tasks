@@ -14,7 +14,7 @@ controller:
     enabled: true
     storageClass: "local-path"  # Для k3s с Local Path Provisioner
     accessMode: ReadWriteOnce
-    size: 2Gi
+    size: 5Gi
 
   # Jenkins Configuration as Code (JCasC)
   JCasC:
