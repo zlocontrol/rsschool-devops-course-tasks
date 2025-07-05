@@ -1,4 +1,3 @@
-#jenkins/values.yaml
 controller:
   image:
     registry: docker.io
@@ -17,27 +16,14 @@ controller:
   JCasC:
     enabled: true
     configScripts:
-      hello-world-job: |
-        jenkins:
-          systemMessage: "Configured via JCasC"
-          jobs:
-            - script: >
-                pipelineJob('hello-world') {
-                  definition {
-                    cps {
-                      script('''
-                        pipeline {
-                          agent any
-                          stages {
-                            stage('Hello') {
-                              steps {
-                                echo 'Hello world'
-                              }
-                            }
-                          }
-                        }
-                      ''')
-                      sandbox()
-                    }
+      my-jcasc: |
+
+        jobs:
+          - script: >
+              pipelineJob('hello-world') {
+                definition {
+                  cps {
+                    script('''node { echo "Hello world" }''')
                   }
                 }
+              }
