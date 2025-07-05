@@ -16,34 +16,18 @@ controller:
     accessMode: ReadWriteOnce
     size: 5Gi
 
-#  # Jenkins Configuration as Code (JCasC)
-#  JCasC:
-#    enabled: true
-#    defaultConfig: |
-#      jenkins:
-#        systemMessage: "Configured via JCasC"
-#        jobs:
-#          - script: >
-#              pipelineJob('hello-world') {
-#                definition {
-#                  cps {
-#                    script('''node { echo "Hello world" }''')
-#                  }
-#                }
-#              }
-  # === ИСПРАВЛЕНО: Используем controller.casc.config для JCasC ===
-  # Это стандартный путь для передачи JCasC конфигурации в Helm Chart Jenkins.
-  casc:
+  JCasC:
     enabled: true
-    config: |
-      jenkins:
-        systemMessage: "Configured via JCasC"
-        jobs:
-          - script: >
-              pipelineJob('hello-world') {
-                definition {
-                  cps {
-                    script('''node { echo "Hello world" }''')
+    configScripts:
+      my-jcasc: |
+        jenkins:
+          systemMessage: "Configured via JCasC"
+          jobs:
+            - script: >
+                pipelineJob('hello-world') {
+                  definition {
+                    cps {
+                      script('''node { echo "Hello world" }''')
+                    }
                   }
                 }
-              }
