@@ -5,10 +5,8 @@ controller:
     repository: jenkins/jenkins
     tag: lts
 
-
   serviceType: NodePort
   nodePort: 32005
-
 
   persistence:
     enabled: true
@@ -19,7 +17,7 @@ controller:
   JCasC:
     enabled: true
     configScripts:
-      my-jcasc: |
+      hello-world-job: |
         jenkins:
           systemMessage: "Configured via JCasC"
           jobs:
@@ -27,7 +25,19 @@ controller:
                 pipelineJob('hello-world') {
                   definition {
                     cps {
-                      script('''node { echo "Hello world" }''')
+                      script('''
+                        pipeline {
+                          agent any
+                          stages {
+                            stage('Hello') {
+                              steps {
+                                echo 'Hello world'
+                              }
+                            }
+                          }
+                        }
+                      ''')
+                      sandbox()
                     }
                   }
                 }
