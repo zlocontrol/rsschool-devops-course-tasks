@@ -1,7 +1,10 @@
 #jenkins/values.yaml
 controller:
-  image: "jenkins/jenkins"
-  tag: "lts"
+  image:
+    registry: docker.io
+    repository: jenkins/jenkins
+    tag: lts
+
 
   serviceType: NodePort
   nodePort: 32005
