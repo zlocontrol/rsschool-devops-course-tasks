@@ -34,13 +34,13 @@ jobs:
         uses: actions/checkout@v4
 
 
-      - name: Install AWS CLI (self-hosted)
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y unzip curl
-          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip -q awscliv2.zip
-          sudo ./aws/install        
+#      - name: Install AWS CLI (self-hosted)
+#        run: |
+#          sudo apt-get update -y
+#          sudo apt-get install -y unzip curl
+#          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+#          unzip -q awscliv2.zip
+#          sudo ./aws/install
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
