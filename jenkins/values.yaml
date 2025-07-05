@@ -1,0 +1,30 @@
+#jenkins/values.yaml
+controller:
+  image: "jenkins/jenkins"
+  tag: "lts"
+
+  serviceType: NodePort
+  nodePort: 32005
+
+
+  persistence:
+    enabled: true
+    storageClass: "local-path"  # Для k3s с Local Path Provisioner
+    accessMode: ReadWriteOnce
+    size: 2Gi
+
+  # Jenkins Configuration as Code (JCasC)
+  JCasC:
+    enabled: true
+    defaultConfig: |
+      jenkins:
+        systemMessage: "Configured via JCasC"
+        jobs:
+          - script: >
+              pipelineJob('hello-world') {
+                definition {
+                  cps {
+                    script('''node { echo "Hello world" }''')
+                  }
+                }
+              }

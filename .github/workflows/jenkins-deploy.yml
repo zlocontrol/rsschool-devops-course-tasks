@@ -1,3 +1,4 @@
+#.github/workflows/jenkins-deploy.yml
 name: Deploy Jenkins Application
 
 #on:
@@ -105,11 +106,8 @@ jobs:
             --create-namespace \
             --wait \
             --timeout 5m \
-            --set controller.serviceType=NodePort \
-            --set controller.nodePort=30080 \
-            --set persistence.enabled=true \
-            --set persistence.storageClass=local-path \
-            --set persistence.size=5Gi
+            -f jenkins/values.yaml
+
 
       - name: Verify Jenkins rollout
         run: |
