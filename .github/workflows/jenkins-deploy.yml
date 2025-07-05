@@ -27,7 +27,7 @@ env:
 jobs:
   jenkins-deploy:
     name: Deploy Jenkins via Helm
-    runs-on: gha-selfhosted-runner
+    runs-on: [self-hosted, Linux, X64]
     steps:
 
       - name: Checkout repository
