@@ -1,5 +1,4 @@
 
-# Network ACL for public subnets
 resource "aws_network_acl" "public_nacl" {
   vpc_id = var.vpc_id
   # Subnet Association

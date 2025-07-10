@@ -6,7 +6,7 @@ on:
   push:
     branches:
       - main
-      - task_*
+#      - task_*
       - create/dev
 #on:
 #  # Allows you to manually run this workflow from the GitHub UI

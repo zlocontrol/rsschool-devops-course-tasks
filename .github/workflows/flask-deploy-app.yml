@@ -1,0 +1,84 @@
+name: Deploy Flask Application
+
+on:
+  push:
+    branches:
+      - main
+#      - task_5
+      - create/dev
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: "us-west-1"
+  NAME_PREFIX: "my-project-dev" # Ваш префикс для ресурсов SSM
+
+
+
+jobs:
+  deploy-flask-app:
+    name: Deploy Flask App
+    runs-on: [self-hosted, Linux, X64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+
+#      - name: Install AWS CLI (if not pre-installed on runner)
+#        run: |
+#          sudo apt-get update -y
+#          sudo apt-get install -y unzip curl
+#          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+#          unzip -q awscliv2.zip
+#          sudo ./aws/install --update
+#          echo "/usr/local/bin" >> $GITHUB_PATH
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.GH_ROLE_ARN_dev }}
+          aws-region:     ${{ env.AWS_REGION }}
+
+      - name: Fetch kubeconfig from SSM Parameter Store
+        run: |
+          aws ssm get-parameter \
+            --name "/${{ env.NAME_PREFIX }}/kubeconfig" \
+            --with-decryption \
+            --region ${{ env.AWS_REGION }} \
+            --query 'Parameter.Value' --output text \
+          > kubeconfig
+          mkdir -p ~/.kube
+          mv kubeconfig ~/.kube/config
+          chmod 600 ~/.kube/config
+          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
+
+      - name: Install kubectl (if not pre-installed on runner)
+        uses: azure/setup-kubectl@v3
+
+      - name: Install Helm (if not pre-installed on runner)
+        uses: azure/setup-helm@v1
+        with:
+          version: v3.14.0
+
+      - name: Check Helm version
+        run: helm version
+
+
+
+
+      - name: Deploy Flask Application using Helm
+        run: |
+          echo "--- Deploying Flask application using Helm ---"
+          # Path to Helm chart relative to repository root
+          helm upgrade --install my-flask-app ./flask-app \
+            --namespace my-app-namespace --create-namespace \
+            --wait --timeout 5m
+          echo "--- Flask Application deployment complete! ---"
+
+      - name: Verify Flask Application rollout
+        run: |
+          kubectl rollout status deployment/my-flask-app -n my-app-namespace --timeout=2m || \
+          (echo "Flask Application rollout failed or timed out." && exit 1)

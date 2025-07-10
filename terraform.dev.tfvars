@@ -57,7 +57,7 @@ gha_runner_instance_type = "t2.micro"
 # GitHub Settings
 github_url   = "https://github.com/zlocontrol" # your user/org
 repo_name    = "rsschool-devops-course-tasks"  # your repo
-runner_token = "BLDVCI3C6MNI6DJS2RTDIA3INKGCQ" # registrar token (one-time!)
+runner_token = "BLDVCI4W4QODOUW746AKGVDIOAKIS" # registrar token (one-time!)
 repo_owner   = "zlocontrol"                    # owner
 
 
