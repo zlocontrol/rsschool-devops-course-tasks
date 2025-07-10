@@ -1,4 +1,4 @@
-#modules/security_groups/main.tf
+
 
 # Security Group for VM-Bastion (which is also the NAT Instance)
 resource "aws_security_group" "bastion_nat_sg" {

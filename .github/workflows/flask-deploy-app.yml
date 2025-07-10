@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-#      - task_5
+      - task_5
       - create/dev
 
 permissions:
@@ -13,7 +13,7 @@ permissions:
 
 env:
   AWS_REGION: "us-west-1"
-  NAME_PREFIX: "my-project-dev" # Ваш префикс для ресурсов SSM
+  NAME_PREFIX: "my-project-dev"
 
 
 
@@ -27,14 +27,14 @@ jobs:
         uses: actions/checkout@v4
 
 
-#      - name: Install AWS CLI (if not pre-installed on runner)
-#        run: |
-#          sudo apt-get update -y
-#          sudo apt-get install -y unzip curl
-#          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-#          unzip -q awscliv2.zip
-#          sudo ./aws/install --update
-#          echo "/usr/local/bin" >> $GITHUB_PATH
+      - name: Install AWS CLI (if not pre-installed on runner)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y unzip curl
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          sudo ./aws/install --update
+          echo "/usr/local/bin" >> $GITHUB_PATH
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
