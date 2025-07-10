@@ -1,0 +1,25 @@
+controller:
+  image:
+    registry: docker.io
+    repository: jenkins/jenkins
+    tag: lts
+
+  # NodePort
+  serviceType: NodePort
+  nodePort: 30080
+
+
+  persistence:
+    enabled: true
+    storageClass: "local-path"
+    accessMode: ReadWriteOnce
+    size: 5Gi
+
+  # Configuration as Code
+  JCasC:
+    enabled: true
+    overwrite: true
+    configScripts:
+      welcome-message: |
+        jenkins:
+          systemMessage: "Jenkins deployed with JCasC "
