@@ -1,0 +1,14 @@
+replicaCount: 1
+
+image:
+  repository: igor237/my-flask-app
+  tag: latest
+  pullPolicy: Always
+
+containerPort: 8080
+
+service:
+  type: NodePort
+  port: 80
+  targetPort: 8080
+  nodePort: 30081

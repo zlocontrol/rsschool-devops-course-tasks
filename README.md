@@ -648,3 +648,132 @@ Screenshot of kubectl get all --all-namespaces (executed on the K3s Master node 
 PR:
 
 PR from task_4 branch to main including all code and outputs
+
+
+task_5
+
+# 📦 Flask App — Helm Chart
+
+## 📋 Description
+
+**Task_5** demonstrates the deployment of a simple Flask web application in a Kubernetes cluster using Docker and Helm. The application displays the message **"Hello, Flask!"**.
+
+The process includes:
+
+- Creating a Flask application.
+- Containerizing the application with Docker (the image is public).
+- Creating a Helm chart for declarative deployment management in Kubernetes.
+- Automating the deployment process using GitHub Actions.
+- Making the application accessible via a web browser.
+
+## ⚙️ Project Structure
+
+```
+rolling-scopes-school/
+├── flask-app/
+│ ├── Chart.yaml # Helm chart metadata
+│ ├── values.yaml # Helm chart settings (image, ports, replicas)
+│ ├── templates/ # Kubernetes manifest templates
+│ │ ├── deployment.yaml # Deployment definition for the app
+│ │ ├── service.yaml # Service (NodePort) definition for access
+│ │ └── _helpers.tpl # Helm helper templates
+│ ├── main.py # Flask app code
+│ ├── requirements.txt # Python dependencies
+│ └── Dockerfile # Docker image definition
+├── .github/workflows/
+│ └── flask-app-deploy.yml # GitHub Actions pipeline for Flask App deployment
+└── ... (other repository files)
+```
+
+## 🐳 Docker Image
+
+The application is containerized in a Docker image.
+
+- **Dockerfile:**
+
+    ```dockerfile
+    FROM python:3.9-slim  
+
+    WORKDIR /app  
+
+    COPY requirements.txt .  
+    RUN pip install --no-cache-dir -r requirements.txt  
+
+    COPY main.py .  
+
+    ENV FLASK_APP=main.py  
+
+    CMD ["flask", "run", "--host=0.0.0.0", "--port=8080"]
+    ```
+
+- **Public image repository:** `igor237/my-flask-app:latest`  
+  Since the image is public, it does not require authentication for pulling.
+
+## 🧩 Helm Chart
+
+The `flask-app` Helm chart is used to deploy the application in Kubernetes.
+
+- **`values.yaml` — key settings:**
+
+    ```yaml
+    replicaCount: 1
+
+    image:
+      repository: igor237/my-flask-app
+      tag: latest
+      pullPolicy: Always
+
+    service:
+      type: NodePort
+      port: 80
+      targetPort: 8080 # Port the Flask app listens on inside the container
+      nodePort: 30081  # Explicit NodePort for external access
+
+    # Note: 'containerPort: 8080' should not be set here in values.yaml.
+    # It must be defined in templates/deployment.yaml.
+    ```
+
+  - **`templates/deployment.yaml`**: Creates a Kubernetes `Deployment` managing the pods with the app. Configured to use the `igor237/my-flask-app:latest` image and expose port `8080` inside the container (`containerPort: 8080` should be defined here).
+
+  - **`templates/service.yaml`**: Creates a Kubernetes `Service` of type `NodePort` to expose the pods. It forwards traffic from port `80` of the service to port `8080` of the container. The explicit `NodePort` `30081` allows access from outside the cluster.
+
+## 🚀 Deploying the Application
+
+Deployment is automated using GitHub Actions.
+
+### **Prerequisites for CI/CD Runner:** (task_4)
+
+For the pipeline to work on a self-hosted runner, the following must be installed and configured:
+
+- **AWS CLI:** To retrieve `kubeconfig` from the SSM Parameter Store.
+- **`kubectl`:** To interact with the Kubernetes cluster.
+- **Helm:** To deploy the Helm chart.
+- **Configured AWS Credentials:** For authentication in AWS (via OIDC and IAM Role).
+- **Kubeconfig in AWS SSM Parameter Store:** Path `/my-project-dev/kubeconfig`.
+
+### **GitHub Actions Pipeline (`.github/workflows/flask-app-deploy.yml`):**
+
+## 🌐 Application Access
+
+After successful deployment, the application will be available via the public IP address of any of your K3s nodes (master or agent) on the NodePort `30081`.
+
+### **Access via SSH Tunnel:**
+
+If direct access to the NodePort is restricted or you prefer tunneling, you can create an SSH tunnel through a Bastion Host.
+
+- **Create an SSH tunnel:** Use the following command on your local machine. Replace `<PUBLIC_DNS_OF_BASTION>` with your Bastion Host’s public DNS, and `<PRIVATE_IP_OF_K3S_MASTER>` with the private IP of your K3s master node.
+
+    ```bash
+    ssh -i ~/.ssh/bastion-key.pem \
+      -J ec2-user@<PUBLIC_DNS_OF_BASTION> \
+      -i ~/.ssh/vm-key.pem \
+      -L 8080:<PRIVATE_IP_OF_K3S_MASTER>:30081 \
+      ec2-user@<PRIVATE_IP_OF_K3S_MASTER> -N
+    ```
+
+    Keep this terminal open while working with the app.
+
+- **Open the app in a browser:** Once the tunnel is established, open your web browser and go to: `http://localhost:8080`
+
+  You should see the message: **"Hello, Flask!"**
+
