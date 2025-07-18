@@ -50,7 +50,7 @@ Manual: Go to the "Actions" tab in your repository, select "Terraform AWS Deploy
 Monitor Execution: Observe the workflow run in the GitHub Actions tab. Review the terraform-plan output and the tfplan artifact carefully before applying changes to main.
 
 
-task_1
+# task_1
 
 ## Terraform AWS Deployment with GitHub Actions
 
@@ -122,8 +122,8 @@ It includes 3 jobs:
 
 📁 Structure
 .
-
-task_2
+---
+# task_2
 
 
 What does this project do?
@@ -147,53 +147,62 @@ Creates routes for private subnets, directing all outbound traffic through the N
 Connecting to Hosts using SSH Agent
 For secure and convenient connection to your EC2 instances, it is recommended to use ssh-agent. This allows you to load your private key once and use it for all subsequent SSH connections without needing to enter a password or specify the key file path each time.
 
-Prerequisites:
+### Prerequisites:
 
-Before deploying the infrastructure, you must create two SSH key pairs in AWS:
+#### Before deploying the infrastructure, you must create two SSH key pairs in AWS:
 
-A key for bastion-key (to be used for the Bastion/NAT Instance).
-A key for vm-key (to be used for the Public and Private VMs).
-Ensure that the public parts of these keys (.pub files) are correctly imported into AWS EC2. The private parts of the keys (.pem files) should be stored locally.
+- A key for bastion-key (to be used for the Bastion/NAT Instance).
+- A key for vm-key (to be used for the Public and Private VMs).
+- Ensure that the public parts of these keys (.pub files) are correctly imported into AWS EC2. The private parts of the keys (.pem files) should be stored locally.
 
-Connection Steps:
+### Connection Steps:
 
-Start ssh-agent:
+- Start ssh-agent:
 
-Bash
 
-eval "$(ssh-agent -s)"
-(On Windows, use Git Bash or WSL for this command. In PowerShell, the command will be Start-SshAgent followed by ssh-add.)
 
-Add your private keys to ssh-agent:
+` eval "$(ssh-agent -s)" `
 
-Bash
+
+(On Windows, use Git Bash or WSL for this command.
+In PowerShell, the command will be Start-SshAgent followed by ssh-add.)
+
+- Add your private keys to ssh-agent:
+
+
+```Bash
 
 ssh-add /path/to/your/bastion-key.pem
 ssh-add /path/to/your/vm-key.pem
-Replace /path/to/your/ with the actual path to your .pem files.
 
-Connect to the Bastion/NAT Instance:
+```
+#### Replace /path/to/your/ with the actual path to your .pem files.
+
+### Connect to the Bastion/NAT Instance:
 First, you need to connect to the bastion host using its public DNS name, which will be assigned by AWS after Terraform deployment.
 
-Bash
 
-ssh -A ec2-user@<Public_DNS_Name_of_Bastion_NAT_VM>
+`ssh -A ec2-user@<Public_DNS_Name_of_Bastion_NAT_VM>` 
+
 The -A flag is crucial as it enables agent forwarding, allowing you to use the same SSH key for subsequent connections from the bastion host to other private VMs.
 ec2-user is the default username for Amazon Linux-based AMIs. If you are using a different AMI, the username may vary (e.g., ubuntu, centos, admin).
 From the Bastion Host, connect to Private/Public VMs:
 Once successfully connected to the bastion host, you can use it to access internal VMs using their private DNS names or IP addresses. Thanks to ssh-agent forwarding, 
 you do not need to copy the private key to the bastion host.
 
-Bash
 
-# From the bastion host
+### From the bastion host
+```bash
 ssh ec2-user@<internal_public_vm_private_ip>
 ssh ec2-user@<private_vm_private_ips >
 ssh ec2-user@<private_vm_private_ips >
-Note: We are utilizing the free DNS names provided by AWS for our EC2 instances, and NOT Elastic IPs, which incur charges under certain usage conditions.
+```
+### Note: We are utilizing the free DNS names provided by AWS for our EC2 instances,
+### and NOT Elastic IPs, which incur charges under certain usage conditions.
 
+----
 
-task_3
+# task_3
 
 K3s Cluster Deployment in AWS with Terraform
 This repository contains Terraform code for the automated deployment of a lightweight Kubernetes (K3s) cluster on Amazon Web Services (AWS). The cluster consists of one master node and one agent node, running on EC2 instances located in private subnets behind a Bastion/NAT instance.
@@ -258,7 +267,7 @@ SSH keys available for accessing EC2 instances (recommended to add them to ssh-a
 kubectl installed on your local computer.
 
 ssh-agent running and your SSH key added.
-
+````
 Project Structure
 .
 ├── main.tf                 # Root Terraform module, main infrastructure plan
@@ -285,24 +294,25 @@ Project Structure
 │       ├── install_k3s_master.sh.tpl      # User-data script for K3s Master
 │       └── install_k3s_agent.sh.tpl       # User-data script for K3s Agent
 └── README.md               # This file
-
+````
 Deployment Configuration (Variables)
 You can customize the cluster deployment parameters by modifying the values in the terraform.tfvars file (or by creating a terraform.dev.tfvars for your environment). Below are the key variables that affect the deployment:
 
-# General AWS settings
-aws_region = "us-west-1" # AWS region for deployment
+### General AWS settings
+- aws_region = "us-west-1" # **AWS region for deployment**
 
-# General project metadata
-group_name = "rs.school"
-iam_user_name = "my_user_task1"
-project_name   = "rsschool"
-environment    = "dev"
-s3_bucket_name = "rsschool-bucket"
-owner = "my_user_task1"
-tags = {
-  Purpose = "K3s Cluster"
+### General project metadata
+- group_name = "rs.school"
+- iam_user_name = "my_user_task1"
+- project_name   = "rsschool"
+- environment    = "dev"
+- s3_bucket_name = "rsschool-bucket"
+- owner = "my_user_task1"
+- tags = {
+Purpose = "K3s Cluster"
 } # Example of common tags
 
+````
 # VPC Settings
 vpc_name           = "rsschool-dev"
 vpc_cidr           = "10.0.0.0/16"
@@ -311,10 +321,13 @@ public_subnets     = ["10.0.1.0/24", "10.0.2.0/24"]
 private_subnets    = ["10.0.101.0/24", "10.0.102.0/24"]
 enable_nat_gateway = false # Using EC2 instance as NAT Gateway
 single_nat_gateway = false # Not applicable when using EC2 as NAT
-
+````
+````
 # EC2 Instance Configuration
 # AMI ID for Amazon Linux 2 (check for current AMI in your region)
 # ami-0328fd517ab093761 - example AMI for us-west-1
+````
+```
 bastion_nat_ami_id        = "ami-0328fd517ab093761"
 bastion_nat_instance_type = "t2.micro" # Bastion/NAT instance type
 
@@ -332,60 +345,66 @@ k3s_master_instance_type = "t2.micro" # K3s Master instance type
 k3s_agent_ami_id        = "ami-0328fd517ab093761"
 k3s_agent_instance_type = "t2.micro" # K3s Agent instance type
 agent_count             = 1 # Number of K3s agents (1 agent + 1 master = 2 nodes in the cluster)
+```
+### Prefix for Terraform resource naming
+- name_prefix = "my-project-dev"
 
-# Prefix for Terraform resource naming
-name_prefix = "my-project-dev"
-
-# SSH Key Names (must be pre-uploaded to AWS EC2)
-vm_key_name      = "vm-key"
-bastion_key_name = "bastion-key"
+### SSH Key Names (must be pre-uploaded to AWS EC2)
+- vm_key_name      = "vm-key"
+- bastion_key_name = "bastion-key"
 
 Cluster Deployment
 Terraform Initialization
-Navigate to the root of your project directory (cd your_repo_path). Run terraform init to initialize the backend and download necessary providers/modules:
+Navigate to the root of your project directory (cd your_repo_path).
+Run terraform init to initialize the backend and download necessary providers/modules:
 
-terraform init
+- terraform init
 
 Planning and Application
 Review the deployment plan to understand which resources will be created:
 
-terraform plan -var-file=terraform.dev.tfvars
+- terraform plan -var-file=terraform.dev.tfvars
 
 If the plan looks correct, apply it to create the infrastructure:
 
-terraform apply -var-file=terraform.dev.tfvars
+- terraform apply -var-file=terraform.dev.tfvars
 
 Confirm the execution by typing yes when prompted. The deployment will take several minutes.
 
 After terraform apply completes, retrieve the output variables which will contain IP addresses and other instance information:
 
-terraform output
+- terraform output
+---
 
-CRITICALLY IMPORTANT: Wait for 5-7 minutes after terraform apply finishes to allow the user-data scripts on the K3s EC2 instances to fully complete their work of installing K3s and registering the nodes.
+### CRITICALLY IMPORTANT: 
+Wait for 5-7 minutes after terraform apply finishes to allow the user-data scripts on the K3s EC2 instances to fully complete their work of installing K3s and registering the nodes.
 
-Accessing the Cluster
-Access via Bastion Host
-To access the K3s Master node, you first need to connect to the Bastion Host, and then from the Bastion Host to the Master.
+----
+### Accessing the Cluster
+#### Access via Bastion Host
+To access the K3s Master node, 
+you first need to connect to the Bastion Host,
+and then from the Bastion Host to the Master.
 
-Connection Steps:
+### Connection Steps:
 
-Start ssh-agent:
+### Start ssh-agent:
 
-eval "$(ssh-agent -s)"
-# (On Windows, use Git Bash or WSL for this command. In PowerShell, the command will be Start-SshAgent followed by ssh-add.)
+`eval "$(ssh-agent -s)"`
+#### (On Windows, use Git Bash or WSL for this command. In PowerShell, the command will be Start-SshAgent followed by ssh-add.)
 
 Add your private keys to ssh-agent:
 
 ssh-add ~/.ssh/bastion-key.pem # Replace with actual path to your key for Bastion
-# ssh-add ~/.ssh/vm-key.pem # If you have a separate key for K3s instances
+#### ssh-add ~/.ssh/vm-key.pem # If you have a separate key for K3s instances
 
 (Replace ~/.ssh/bastion-key.pem with the actual path to your .pem file)
 
-Connect to the Bastion/NAT Instance:
+#### Connect to the Bastion/NAT Instance:
 First, connect to the Bastion Host using its public DNS name (or public IP address) from terraform output. The -A flag (agent forwarding) is crucial as it allows you to use the same SSH key for subsequent connections from the Bastion Host to other private VMs.
 
 ssh -A ec2-user@<Public_DNS_Name_of_Bastion_NAT_VM>
-# Example: ssh -A ec2-user@ec2-54-176-235-69.us-west-1.compute.amazonaws.com
+*  Example: ssh -A ec2-user@ec2-54-176-235-69.us-west-1.compute.amazonaws.com
 
 (ec2-user is the default username for Amazon Linux AMIs. If you are using a different AMI, the username may vary (e.g., ubuntu, centos, admin).)
 Note: We are utilizing the free DNS names provided by AWS for our EC2 instances, and NOT Elastic IPs, which incur charges under certain usage conditions.
@@ -393,13 +412,15 @@ Note: We are utilizing the free DNS names provided by AWS for our EC2 instances,
 From the Bastion Host, connect to K3s Master:
 Once successfully connected to the Bastion Host, you can use it to access the K3s Master node using its private IP address from terraform output. Thanks to ssh-agent forwarding, you do not need to copy the private key to the Bastion Host.
 
-# From the bastion host
-ssh ec2-user@<Private_IP_of_K3s_Master>
-# Example: ssh ec2-user@10.0.101.35
+- From the bastion host
++ ssh ec2-user@<Private_IP_of_K3s_Master>
+* Example: ssh ec2-user@10.0.101.35
 
-You are now on the master node and can execute kubectl commands.
+4. You are now on the master node and can execute kubectl commands.
 
-Access from Local Computer
+
+
+### Access from Local Computer
 To manage the K3s cluster directly from your local computer, you will need to create an SSH tunnel to the master node via the Bastion Host and configure your kubeconfig.
 
 Copy the kubeconfig file from the master node to your local computer:
@@ -409,19 +430,21 @@ Replace IP addresses and DNS name with the actual values from terraform output.
 Ensure ~/.ssh/bastion-key.pem points to your private SSH key.
 
 scp -o ProxyCommand="ssh -W %h:%p -i ~/.ssh/bastion-key.pem ec2-user@<Public_DNS_Name_of_Bastion_NAT_VM>" -i ~/.ssh/bastion-key.pem ec2-user@<Private_IP_of_K3s_Master>:/home/ec2-user/.kube/config ~/.kube/config_k3s_cluster
-# Example: scp -o ProxyCommand="ssh -W %h:%p -i ~/.ssh/bastion-key.pem ec2-user@ec2-54-176-235-69.us-west-1.compute.amazonaws.com" -i ~/.ssh/bastion-key.pem ec2-user@10.0.101.35:/home/ec2-user/.kube/config ~/.kube/config_k3s_cluster
+- * Example: scp -o ProxyCommand="ssh -W %h:%p -i ~/.ssh/bastion-key.pem ec2-user@ec2-54-176-235-69.us-west-1.compute.amazonaws.com" -i ~/.ssh/bastion-key.pem ec2-user@10.0.101.35:/home/ec2-user/.kube/config ~/.kube/config_k3s_cluster 
 
 This command will copy the kubeconfig file from the master node to ~/.kube/config_k3s_cluster on your local computer.
 Important Note: The kubeconfig file generated by K3s on the master node contains server: https://127.0.0.1:6443. DO NOT CHANGE this address in the ~/.kube/config_k3s_cluster file! The SSH tunnel you create next will handle redirecting local traffic from 127.0.0.1:6443 to the master's private IP via the Bastion.
 
-Open a new terminal on your local computer and create an SSH tunnel:
+#### Open a new terminal on your local computer and create an SSH tunnel:
 
 This tunnel will forward traffic from your local port 6443 to port 6443 of the K3s Master via the Bastion.
 
-Replace IP addresses, DNS name, and key path with the actual values.
+#### Replace IP addresses, DNS name, and key path with the actual values.
 
-ssh -i ~/.ssh/bastion-key.pem -L 6443:<Private_IP_of_K3s_Master>:6443 ec2-user@<Public_DNS_Name_of_Bastion_NAT_VM> -N
-# Example: ssh -i ~/.ssh/bastion-key.pem -L 6443:10.0.101.35:6443 ec2-user@ec2-54-176-235-69.us-west-1.compute.amazonaws.com -N
+```ssh -i ~/.ssh/bastion-key.pem -L 6443:<Private_IP_of_K3s_Master>:6443 ec2-user@<Public_DNS_Name_of_Bastion_NAT_VM> -N```
+
+##### Example: 
+`ssh -i ~/.ssh/bastion-key.pem -L 6443:10.0.101.35:6443 ec2-user@ec2-54-176-235-69.us-west-1.compute.amazonaws.com -N`
 
 Leave this terminal open while you are working with the cluster. It keeps the tunnel active.
 
@@ -429,11 +452,11 @@ Open another new terminal on your local computer.
 
 In this new terminal, set the KUBECONFIG environment variable:
 
-export KUBECONFIG=~/.kube/config_k3s_cluster
+`export KUBECONFIG=~/.kube/config_k3s_cluster`
 
 Verify the cluster from your local computer:
 
-kubectl get nodes
+**`kubectl get nodes`**
 
 You should see both nodes Ready.
 
@@ -443,30 +466,30 @@ Cluster Verification
 After deployment and allowing time for initialization, verify the status of the cluster nodes from the Bastion Host (after connecting to the master node via Bastion, as described above):
 
 kubectl get nodes
-
+```
 Expected Output:
 
 NAME                                       STATUS   ROLES                 AGE   VERSION
 ip-10-0-101-35.us-west-1.compute.internal   Ready    control-plane,master   Xm   v1.32.5+k3s1
 ip-10-0-102-6.us-west-1.compute.internal    Ready    <none>                 Ym   v1.32.5+k3s1
-
+```
 (where X and Y are node uptimes)
 
 Workload Deployment
 Deploy a simple test workload (e.g., Nginx Pod) to the cluster:
 
-kubectl apply -f https://k8s.io/examples/pods/simple-pod.yaml
+`kubectl apply -f https://k8s.io/examples/pods/simple-pod.yaml`
 
 Verify the status of all pods and other resources in the cluster:
 
-kubectl get all --all-namespaces
+`kubectl get all --all-namespaces`
 
 Expected Output: In the list of pods (in the default namespace), you should see nginx in a Running status.
 
 Resource Cleanup
 To delete all AWS resources created by this Terraform code, execute:
 
-terraform destroy -var-file=terraform.dev.tfvars
+#### `terraform destroy -var-file=terraform.dev.tfvars`
 
 Confirm deletion by typing yes when prompted.
 
@@ -489,13 +512,16 @@ kubectl: command not found: This error on the master node indicates that the K3s
 
 Robust user-data scripts: It's important to use set -ex in scripts for immediate exit on errors and detailed logging. Including retry mechanisms for network connectivity and SSM token retrieval (with timeouts) makes the scripts more resilient to transient issues during instance startup.
 
+---
 
-task_4
+# task_4
 
- Deploying Jenkins on AWS with Helm and GitHub Actions
-In this task, we deploy Jenkins, an open-source automation server, to our K3s cluster on AWS using Helm for package management and GitHub Actions to automate the deployment process.
+## Deploying Jenkins on AWS with Helm and GitHub Actions
+In this task, we deploy Jenkins, an open-source automation server,
+to our K3s cluster on AWS using Helm for package management
+and GitHub Actions to automate the deployment process.
 
- Task Objectives
+Task Objectives
 Install and verify Helm.
 
 Ensure the cluster has a solution for managing persistent volumes (PVs) and persistent volume claims (PVCs) (using local-path-provisioner in K3s).
@@ -514,18 +540,18 @@ Configure authentication and security settings for Jenkins (initial admin passwo
 
 Use Jenkins Configuration as Code (JCasC) to define the "Hello World" job.
 
- Stack
-Kubernetes (K3s)
+## Stack
+- Kubernetes (K3s)
 
-Helm v3+
+- Helm v3+
 
-Jenkins LTS
+- Jenkins LTS
 
-Jenkins Configuration as Code (JCasC)
+- Jenkins Configuration as Code (JCasC)
 
-GitHub Actions
+- GitHub Actions
 
-AWS EC2, VPC, S3, SSM (as part of the base infrastructure)
+- AWS EC2, VPC, S3, SSM (as part of the base infrastructure)
 
  Jenkins Configuration (Helm values.yaml)
 Jenkins configuration for Helm deployment is defined in the jenkins/values.yaml file. This file includes:
@@ -552,7 +578,7 @@ controller:
     storageClass: "local-path"
     accessMode: ReadWriteOnce
     size: 5Gi
-```
+```yaml
   JCasC:
     enabled: true
     configScripts:
@@ -575,7 +601,7 @@ controller:
         # add them here.
 ```
  GitHub Actions Pipeline for Jenkins Deployment
-File: .github/workflows/jenkins-deploy.yml
+File: **`.github/workflows/jenkins-deploy.yml`**
 
 This pipeline automates the process of deploying Jenkins to the K3s cluster:
 
@@ -597,18 +623,20 @@ Verify Jenkins Deployment: Checks the deployment status of the Jenkins StatefulS
 
 Self-hosted Runner: Note that the pipeline runs on a self-hosted runner deployed in your VPC (on an EC2 instance), which provides access to internal AWS resources.
 
-🌐 Accessing Jenkins
+### 🌐 Accessing Jenkins
 To access the Jenkins web interface, deployed in a private subnet, you need to create an SSH tunnel through the Bastion Host.
 
-Create SSH Tunnel:
-Use the following command on your local machine. Replace <PUBLIC_DNS_OF_BASTION> with the public DNS of your Bastion Host, and <PRIVATE_IP_OF_K3S_MASTER> with the private IP of your K3s master node.
-``
+### Create SSH Tunnel:
+Use the following command on your local machine.
+Replace <PUBLIC_DNS_OF_BASTION> with the public DNS of your Bastion Host,
+and <PRIVATE_IP_OF_K3S_MASTER> with the private IP of your K3s master node.
+```Bash
 ssh -i ~/.ssh/bastion-key.pem \
   -J ec2-user@<PUBLIC_DNS_OF_BASTION> \
   -i ~/.ssh/vm-key.pem \
   -L 8080:<PRIVATE_IP_OF_K3S_MASTER>:32005 \
   ec2-user@<PRIVATE_IP_OF_K3S_MASTER> -N
-``
+```
 Keep this terminal open while you are working with Jenkins.
 
 Get Initial Admin Password:
@@ -647,4 +675,139 @@ Screenshot of kubectl get all --all-namespaces (executed on the K3s Master node 
 
 PR:
 
+<<<<<<< Updated upstream
 PR from task_4 branch to main including all code and outputs
+=======
+PR from task_4 branch to main including all code and outputs
+
+----
+
+# task_5
+
+## 📦 Flask App  Helm Chart
+
+### 📋 Description
+
+**Task_5** demonstrates the deployment of a simple Flask web application in a Kubernetes cluster using Docker and Helm. The application displays the message **"Hello, Flask!"**.
+
+The process includes:
+
+- Creating a Flask application.
+- Containerizing the application with Docker (the image is public).
+- Creating a Helm chart for declarative deployment management in Kubernetes.
+- Automating the deployment process using GitHub Actions.
+- Making the application accessible via a web browser.
+
+## ⚙️ Project Structure
+
+```
+rolling-scopes-school/
+├── flask-app/
+│ ├── Chart.yaml # Helm chart metadata
+│ ├── values.yaml # Helm chart settings (image, ports, replicas)
+│ ├── templates/ # Kubernetes manifest templates
+│ │ ├── deployment.yaml # Deployment definition for the app
+│ │ ├── service.yaml # Service (NodePort) definition for access
+│ │ └── _helpers.tpl # Helm helper templates
+│ ├── main.py # Flask app code
+│ ├── requirements.txt # Python dependencies
+│ └── Dockerfile # Docker image definition
+├── .github/workflows/
+│ └── flask-app-deploy.yml # GitHub Actions pipeline for Flask App deployment
+└── ... (other repository files)
+```
+
+## 🐳 Docker Image
+
+The application is containerized in a Docker image.
+
+- **Dockerfile:**
+
+    ```dockerfile
+    FROM python:3.9-slim  
+
+    WORKDIR /app  
+
+    COPY requirements.txt .  
+    RUN pip install --no-cache-dir -r requirements.txt  
+
+    COPY main.py .  
+
+    ENV FLASK_APP=main.py  
+
+    CMD ["flask", "run", "--host=0.0.0.0", "--port=8080"]
+    ```
+
+- **Public image repository:** `igor237/my-flask-app:latest`  
+  Since the image is public, it does not require authentication for pulling.
+
+## 🧩 Helm Chart
+
+The `flask-app` Helm chart is used to deploy the application in Kubernetes.
+
+- **`values.yaml`  key settings:**
+
+    ```yaml
+    replicaCount: 1
+
+    image:
+      repository: igor237/my-flask-app
+      tag: latest
+      pullPolicy: Always
+
+    service:
+      type: NodePort
+      port: 80
+      targetPort: 8080 # Port the Flask app listens on inside the container
+      nodePort: 30081  # Explicit NodePort for external access
+
+    # Note: 'containerPort: 8080' should not be set here in values.yaml.
+    # It must be defined in templates/deployment.yaml.
+    ```
+
+  - **`templates/deployment.yaml`**: Creates a Kubernetes `Deployment` managing the pods with the app. Configured to use the `igor237/my-flask-app:latest` image and expose port `8080` inside the container (`containerPort: 8080` should be defined here).
+
+  - **`templates/service.yaml`**: Creates a Kubernetes `Service` of type `NodePort` to expose the pods. It forwards traffic from port `80` of the service to port `8080` of the container. The explicit `NodePort` `30081` allows access from outside the cluster.
+
+## 🚀 Deploying the Application
+
+Deployment is automated using GitHub Actions.
+
+### **Prerequisites for CI/CD Runner:** (task_4)
+
+For the pipeline to work on a self-hosted runner, the following must be installed and configured:
+
+- **AWS CLI:** To retrieve `kubeconfig` from the SSM Parameter Store.
+- **`kubectl`:** To interact with the Kubernetes cluster.
+- **Helm:** To deploy the Helm chart.
+- **Configured AWS Credentials:** For authentication in AWS (via OIDC and IAM Role).
+- **Kubeconfig in AWS SSM Parameter Store:** Path `/my-project-dev/kubeconfig`.
+
+### **GitHub Actions Pipeline (`.github/workflows/flask-app-deploy.yml`):**
+
+## 🌐 Application Access
+
+After successful deployment, the application will be available via the public IP address of any of your K3s nodes (master or agent) on the NodePort `30081`.
+
+### **Access via SSH Tunnel:**
+
+If direct access to the NodePort is restricted or you prefer tunneling, you can create an SSH tunnel through a Bastion Host.
+
+- **Create an SSH tunnel:** Use the following command on your local machine. Replace `<PUBLIC_DNS_OF_BASTION>` with your Bastion Host’s public DNS, and `<PRIVATE_IP_OF_K3S_MASTER>` with the private IP of your K3s master node.
+
+    ```bash
+    ssh -i ~/.ssh/bastion-key.pem \
+      -J ec2-user@<PUBLIC_DNS_OF_BASTION> \
+      -i ~/.ssh/vm-key.pem \
+      -L 8080:<PRIVATE_IP_OF_K3S_MASTER>:30081 \
+      ec2-user@<PRIVATE_IP_OF_K3S_MASTER> -N
+    ```
+
+###    Keep this terminal open while working with the app.
+
+- **Open the app in a browser:** Once the tunnel is established, open your web browser and go to: `http://localhost:8080`
+
+  You should see the message: **"Hello, Flask!"**
+---
+# task_6
+>>>>>>> Stashed changes
