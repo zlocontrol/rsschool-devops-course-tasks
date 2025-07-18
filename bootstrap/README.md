@@ -1,12 +1,13 @@
-GitHub Actions: AWS Bootstrap & OIDC Role
+### GitHub Actions: AWS Bootstrap & OIDC Role
+
 This GitHub Actions workflow automates the initial setup of core AWS infrastructure required for Terraform deployments, specifically creating an S3 bucket for Terraform state and an AWS IAM Role for subsequent GitHub Actions using OpenID Connect (OIDC).
 
-Purpose & Features
+### Purpose & Features
 Initial AWS Setup: Automates the creation of an S3 bucket to store Terraform state, crucial for managing your infrastructure.
 Secure OIDC Integration: Configures an AWS IAM Role that GitHub Actions can securely assume using OIDC, eliminating the need for long-lived AWS credentials in your workflows.
 Dynamic Credential Management: Extracts key outputs (S3 bucket name, IAM Role ARN) from Terraform and saves them as GitHub Secrets for use in other workflows, dynamically named based on the environment.
 Controlled Deployment: Triggerable via push to specific branches or manually, allowing for clear control over when bootstrap infrastructure is deployed or updated.
-Prerequisites
+### Prerequisites
 Before running this workflow, ensure you have:
 
 AWS Account: An active AWS account where resources will be deployed.
@@ -43,8 +44,8 @@ Monitor Execution: Observe the workflow run in the GitHub Actions tab.
 
 Verify Outputs: After successful completion, verify that new GitHub Secrets named TF_BUCKET_NAME_<ENV> and GH_ROLE_ARN_<ENV> (where <ENV> is your tf_env in uppercase) have been created in your repository settings.
 
-Important Considerations
-Bootstrap Credentials Security: The BOOTSTRAP_ACCESS_KEY_ID and BOOTSTRAP_SECRET_ACCESS_KEY used in this workflow are highly privileged. Treat them with extreme care and ensure they have only the minimum necessary permissions. Consider rotating them regularly.
+### Important Considerations
+##### Bootstrap Credentials Security: The BOOTSTRAP_ACCESS_KEY_ID and BOOTSTRAP_SECRET_ACCESS_KEY used in this workflow are highly privileged. Treat them with extreme care and ensure they have only the minimum necessary permissions. Consider rotating them regularly.
 OIDC Thumbprint: The OIDC provider's thumbprint_list in your Terraform code (6938fd4d98bab03faadb97b34396831e3780fa86) might become outdated. If you encounter errors during OIDC provider creation or validation, you'll need to update this value to the latest thumbprint for https://token.actions.githubusercontent.com.
 
 
@@ -63,13 +64,13 @@ It allows you to either create a new OIDC provider for token.actions.githubuserc
 Usage:
 Variables: Define create_oidc_provider, role_name, environment, github_repo_owner, and github_repo_name.
 
-First Run:
+### First Run:
 
-Set create_oidc_provider = true.
+Set **`create_oidc_provider = true`**.
 Run terraform init, terraform plan, terraform apply.
 Subsequent Runs:
 
-After the OIDC provider is created, set create_oidc_provider = false.
+After the OIDC provider is created, set `create_oidc_provider = false`.
 Run terraform plan, terraform apply. This prevents re-creation and references the existing provider.
 Important: thumbprint_list
 The thumbprint_list is mandatory. The provided 6938fd4d98bab03faadb97b34396831e3780fa86 might become outdated. 
