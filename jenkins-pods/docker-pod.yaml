@@ -8,7 +8,6 @@ spec:
   containers:
     - name: docker
       image: docker:dind
-      args: ["--port=2376", "--host=unix:///var/run/docker.sock"]
       securityContext:
         privileged: true
       resources:
