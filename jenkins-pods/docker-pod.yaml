@@ -6,20 +6,26 @@ metadata:
     jenkins: docker
   namespace: jenkins
 spec:
+  serviceAccountName: jenkins
   containers:
     - name: docker
-      image: docker:dind
-      command: [ "/bin/sh", "-ce" ]
-      args: [ "tail -f /dev/null" ]
-      securityContext:
-        privileged: true
+      image: docker:latest
+      command: ["/bin/sh", "-ce"]
+      args: ["tail -f /dev/null"]
+
+      volumeMounts:
+        - mountPath: "/home/jenkins/agent"
+          name: "workspace-volume"
+          readOnly: false
+        - mountPath: "/var/run/docker.sock"
+          name: "docker-socket"
       resources:
-        requests:
-          cpu: "500m"
-          memory: "1Gi"
         limits:
           cpu: "1"
           memory: "2Gi"
+        requests:
+          cpu: "500m"
+          memory: "1Gi"
     - name: jnlp
       image: jenkins/inbound-agent:3309.v27b_9314fd1a_4-1
       args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
@@ -28,8 +34,20 @@ spec:
           value: "http://jenkins.jenkins.svc.cluster.local:8080/"
       resources:
         requests:
-          cpu: "100m"
           memory: "256Mi"
-        limits:
-          cpu: "200m"
-          memory: "512Mi"
+          cpu: "100m"
+      volumeMounts:
+        - mountPath: "/home/jenkins/agent"
+          name: "workspace-volume"
+          readOnly: false
+  nodeSelector:
+    kubernetes.io/os: "linux"
+  restartPolicy: "Never"
+  volumes:
+    - emptyDir:
+        medium: ""
+      name: "workspace-volume"
+    - name: docker-socket
+      hostPath:
+        path: /var/run/docker.sock
+        type: Socket
