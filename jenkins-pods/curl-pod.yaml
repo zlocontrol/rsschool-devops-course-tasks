@@ -9,7 +9,7 @@ spec:
   serviceAccountName: jenkins
   containers:
     - name: curl
-      image: alpine/helm:3.14.4
+      image: bitnami/kubectl:latest
       command: [ "/bin/sh", "-ce" ]
       args: [ "tail -f /dev/null" ]
       volumeMounts:
