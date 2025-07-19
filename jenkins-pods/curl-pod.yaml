@@ -1,5 +1,4 @@
 
-# jenkins-pods/curl-pod.yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -14,21 +13,25 @@ spec:
       command: [ "/bin/sh", "-ce" ]
       args:
         - | 
-          # Attempt to install curl, as bitnami/kubectl might not include it by default
-          apk add --no-cache curl || true
-          tail -f /dev/null # Keep container running
+          
+          apk update && apk add --no-cache curl || true
+          tail -f /dev/null
       volumeMounts:
-      - mountPath: "/home/jenkins/agent"
-        name: "workspace-volume"
-        readOnly: false
+        - mountPath: "/home/jenkins/agent"
+          name: "workspace-volume"
+          readOnly: false
     - name: jnlp
       image: jenkins/inbound-agent:3309.v27b_9314fd1a_4-1
       args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
+      resources:
+        requests:
+          memory: "256Mi"
+          cpu: "100m"
       volumeMounts:
-      - mountPath: "/home/jenkins/agent"
-        name: "workspace-volume"
-        readOnly: false
+        - mountPath: "/home/jenkins/agent"
+          name: "workspace-volume"
+          readOnly: false
   volumes:
-  - emptyDir:
-      medium: ""
-    name: "workspace-volume"
+    - emptyDir:
+        medium: ""
+      name: "workspace-volume"
