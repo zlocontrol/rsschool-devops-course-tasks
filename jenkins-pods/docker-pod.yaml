@@ -8,9 +8,7 @@ spec:
   containers:
     - name: docker
       image: docker:dind
-      command:
-        - cat
-      tty: true
+      args: ["--port=2376", "--host=unix:///var/run/docker.sock"]
       securityContext:
         privileged: true
       resources:
@@ -23,6 +21,9 @@ spec:
     - name: jnlp
       image: jenkins/inbound-agent:3309.v27b_9314fd1a_4-1
       args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
+      env:
+        - name: "JENKINS_URL"
+          value: "http://jenkins.jenkins.svc.cluster.local:8080/"
       resources:
         requests:
           cpu: "100m"
