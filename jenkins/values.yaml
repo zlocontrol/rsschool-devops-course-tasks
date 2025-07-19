@@ -1,13 +1,66 @@
+##jenkins/values.yaml
+#controller:
+#  image:
+#    registry: docker.io
+#    repository: jenkins/jenkins
+#    tag: lts
+#
+#
+##  serviceAccount:
+##    create: false
+##    name: jenkins
+#
+#
+#
+#  # NodePort
+#  serviceType: NodePort
+#  nodePort: 30080
+#
+#
+#  persistence:
+#    enabled: true
+#    storageClass: "local-path"
+#    accessMode: ReadWriteOnce
+#    size: 5Gi
+#
+#
+#
+#
+#  # Configuration as Code
+#  JCasC:
+#    enabled: true
+#    overwrite: true
+#    configScripts:
+#      welcome-message: |
+#        jenkins:
+#          systemMessage: "Jenkins deployed with JCasC "
+
+
 controller:
+  admin:
+    username: admin
+    password: mySuperSecurePassword123
+
   image:
     registry: docker.io
     repository: jenkins/jenkins
     tag: lts
 
-  # NodePort
+  serviceAccount:
+    create: false
+    name: jenkins
+
+  installPlugins:
+    - kubernetes
+    - workflow-aggregator
+    - docker-workflow
+
+
+  jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
+
+
   serviceType: NodePort
   nodePort: 30080
-
 
   persistence:
     enabled: true
@@ -15,7 +68,7 @@ controller:
     accessMode: ReadWriteOnce
     size: 5Gi
 
-  # Configuration as Code
+  # Configuration as Code (JCasC)
   JCasC:
     enabled: true
     overwrite: true
@@ -23,3 +76,4 @@ controller:
       welcome-message: |
         jenkins:
           systemMessage: "Jenkins deployed with JCasC "
+

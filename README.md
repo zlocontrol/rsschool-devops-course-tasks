@@ -15,23 +15,26 @@ Before running this workflow, ensure you have:
 Terraform Code: Your Terraform .tf files and terraform.<env>.tfvars files (e.g., terraform.dev.tfvars, terraform.prod.tfvars) in your repository.
 Bootstrap Infrastructure: The S3 bucket for Terraform state and the OIDC-enabled IAM Role (e.g., GH_ROLE_ARN_dev, GH_ROLE_ARN_prod) must already be created, ideally by a preceding bootstrap workflow.
 GitHub Secrets: The following secrets must be available in your repository (set by the bootstrap workflow):
-TF_BUCKET_NAME_dev: S3 bucket name for dev environment.
-GH_ROLE_ARN_dev: IAM Role ARN for dev environment.
-TF_BUCKET_NAME_prod: S3 bucket name for prod environment.
-GH_ROLE_ARN_prod: IAM Role ARN for prod environment.
-Workflow Structure
+- TF_BUCKET_NAME_dev: S3 bucket name for dev environment.
+- GH_ROLE_ARN_dev: IAM Role ARN for dev environment.
+- TF_BUCKET_NAME_prod: S3 bucket name for prod environment.
+- GH_ROLE_ARN_prod: IAM Role ARN for prod environment.
+
+#### Workflow Structure
 This workflow consists of three main jobs:
 
-terraform-check: Runs terraform fmt -check -recursive to ensure code formatting compliance.
-terraform-plan:
-Checks out the code.
+- terraform-check: Runs terraform fmt -check -recursive to ensure code formatting compliance.
+- terraform-plan:
+
+#### Checks out the code.
 Dynamically selects and exports the correct S3 bucket name and IAM Role ARN based on the TF_ENV (defaults to dev).
 Configures AWS credentials by assuming the specified OIDC role.
 Generates a backend.tf file for S3 state.
-Validates the presence of terraform.<ENV>.tfvars.
+Validates the presence of terraform.*<ENV>*.tfvars.
 Runs terraform init and terraform validate.
 Creates a tfplan file and uploads it as an artifact.
-terraform-apply:
+- terraform-apply:
+
 Conditional Run: Only runs on push events to the main branch.
 Similar setup steps to terraform-plan (checkout, setup Terraform, export secrets, configure AWS credentials, generate backend).
 Downloads the tfplan artifact from the terraform-plan job.
@@ -40,7 +43,7 @@ How to Use
 Set Environment Variables:
 
 The TF_ENV environment variable defaults to "dev". You can change this directly in the workflow file or override it via workflow_dispatch if you modify the input section.
-Ensure your terraform.<env>.tfvars files exist for each environment you intend to deploy to (e.g., terraform.dev.tfvars, terraform.prod.tfvars).
+Ensure your `terraform.<env>.tfvars` files exist for each environment you intend to deploy to (e.g., terraform.dev.tfvars, terraform.prod.tfvars).
 Trigger the Workflow:
 
 Automatic:
@@ -204,7 +207,7 @@ ssh ec2-user@<private_vm_private_ips >
 
 # task_3
 
-K3s Cluster Deployment in AWS with Terraform
+## K3s Cluster Deployment in AWS with Terraform
 This repository contains Terraform code for the automated deployment of a lightweight Kubernetes (K3s) cluster on Amazon Web Services (AWS). The cluster consists of one master node and one agent node, running on EC2 instances located in private subnets behind a Bastion/NAT instance.
 
 Table of Contents
@@ -237,32 +240,32 @@ Resource Cleanup
 Troubleshooting (Key Debugging Points)
 
 Architecture Overview
-The K3s cluster is deployed within a specially configured VPC with public and private subnets:
+- The K3s cluster is deployed within a specially configured VPC with public and private subnets:
 
-VPC (Virtual Private Cloud): An isolated network environment within AWS.
+- VPC (Virtual Private Cloud): An isolated network environment within AWS.
 
-Public Subnets: Contain the Bastion/NAT instance. They have Internet access via an Internet Gateway.
+- Public Subnets: Contain the Bastion/NAT instance. They have Internet access via an Internet Gateway.
 
-Private Subnets: Contain the K3s Master and K3s Agent nodes. Internet access is only possible via the NAT Gateway deployed in the public subnet.
+- Private Subnets: Contain the K3s Master and K3s Agent nodes. Internet access is only possible via the NAT Gateway deployed in the public subnet.
 
-Bastion/NAT Host: A single entry point into the private subnets for SSH and acts as a NAT Gateway for outbound traffic from private instances.
+- Bastion/NAT Host: A single entry point into the private subnets for SSH and acts as a NAT Gateway for outbound traffic from private instances.
 
-K3s Master Node: Runs the K3s Server, which is the Kubernetes Control Plane for the cluster.
+- K3s Master Node: Runs the K3s Server, which is the Kubernetes Control Plane for the cluster.
 
-K3s Agent Node: Runs the K3s Agent, which is a Worker Node of the Kubernetes cluster.
+- K3s Agent Node: Runs the K3s Agent, which is a Worker Node of the Kubernetes cluster.
 
-Security Groups & Network ACLs: Configured to ensure secure and necessary network communication between components.
+- Security Groups & Network ACLs: Configured to ensure secure and necessary network communication between components.
 
-IAM Roles: Grant EC2 instances the required permissions (e.g., access to AWS SSM Parameter Store to retrieve the K3s token).
+- IAM Roles: Grant EC2 instances the required permissions (e.g., access to AWS SSM Parameter Store to retrieve the K3s token).
 
-AWS SSM Parameter Store: Used for secure storage of the K3s token generated by Terraform.
+- AWS SSM Parameter Store: Used for secure storage of the K3s token generated by Terraform.
 
 Prerequisites
 An AWS account with configured credentials (AWS CLI configured).
 
 Terraform installed (version 1.0+).
 
-SSH keys available for accessing EC2 instances (recommended to add them to ssh-agent).
+#### SSH keys available for accessing EC2 instances (recommended to add them to ssh-agent).
 
 kubectl installed on your local computer.
 
@@ -402,8 +405,9 @@ ssh-add ~/.ssh/bastion-key.pem # Replace with actual path to your key for Bastio
 
 #### Connect to the Bastion/NAT Instance:
 First, connect to the Bastion Host using its public DNS name (or public IP address) from terraform output. The -A flag (agent forwarding) is crucial as it allows you to use the same SSH key for subsequent connections from the Bastion Host to other private VMs.
-
+```bash
 ssh -A ec2-user@<Public_DNS_Name_of_Bastion_NAT_VM>
+```
 *  Example: ssh -A ec2-user@ec2-54-176-235-69.us-west-1.compute.amazonaws.com
 
 (ec2-user is the default username for Amazon Linux AMIs. If you are using a different AMI, the username may vary (e.g., ubuntu, centos, admin).)
@@ -425,7 +429,7 @@ To manage the K3s cluster directly from your local computer, you will need to cr
 
 Copy the kubeconfig file from the master node to your local computer:
 
-Replace IP addresses and DNS name with the actual values from terraform output.
+#### Replace IP addresses and DNS name with the actual values from terraform output.
 
 Ensure ~/.ssh/bastion-key.pem points to your private SSH key.
 
@@ -465,7 +469,7 @@ For persistent use, you can add export KUBECONFIG=~/.kube/config_k3s_cluster to 
 Cluster Verification
 After deployment and allowing time for initialization, verify the status of the cluster nodes from the Bastion Host (after connecting to the master node via Bastion, as described above):
 
-kubectl get nodes
+`kubectl get nodes`
 ```
 Expected Output:
 
@@ -651,6 +655,7 @@ Open a web browser and navigate to http://localhost:8080. Use the retrieved pass
 Jenkins, deployed in Kubernetes, uses a Service Account to interact with the Kubernetes API. This allows Jenkins to dynamically create agent pods for executing tasks. The Jenkins Helm chart automatically creates the necessary jenkins Service Account in the jenkins namespace and binds the required permissions to it (via RoleBinding/ClusterRoleBinding) so that Jenkins can manage pods in the cluster.
 
  Verification & Submission
+
 ✅ Helm is installed and verified by deploying and removing the Nginx chart (automated in the jenkins-deploy.yml pipeline).
 
 ✅ Jenkins is installed using Helm in a separate namespace (jenkins).

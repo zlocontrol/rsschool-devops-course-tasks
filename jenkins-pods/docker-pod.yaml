@@ -1,0 +1,32 @@
+
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    jenkins: docker
+spec:
+  containers:
+    - name: docker
+      image: docker:dind
+      command:
+        - cat
+      tty: true
+      securityContext:
+        privileged: true
+      resources:
+        requests:
+          cpu: "500m"
+          memory: "1Gi"
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+    - name: jnlp
+      image: jenkins/inbound-agent:3309.v27b_9314fd1a_4-1
+      args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "200m"
+          memory: "512Mi"
