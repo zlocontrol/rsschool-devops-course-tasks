@@ -73,38 +73,36 @@ pipeline {
                     script {
                         def serviceName = env.HELM_RELEASE
                         def namespace = 'jenkins'
+                        def servicePort = '8080'  // Если у тебя другой порт в values.yaml - поправь!
 
-                        // Get ClusterIP and Port of the service
-                        def serviceIp = sh(script: "kubectl get svc ${serviceName} -n ${namespace} -o jsonpath='{.spec.clusterIP}'", returnStdout: true).trim()
-                        def servicePort = sh(script: "kubectl get svc ${serviceName} -n ${namespace} -o jsonpath='{.spec.ports[0].port}'", returnStdout: true).trim()
-
-                        def appUrl = "http://${serviceIp}:${servicePort}"
+                        def appUrl = "http://${serviceName}.${namespace}.svc.cluster.local:${servicePort}"
 
                         echo "Performing smoke test on: ${appUrl}"
 
-                        // Perform curl request with retries
                         def maxAttempts = 10
                         def attempt = 0
                         def success = false
+
                         while (attempt < maxAttempts && !success) {
                             try {
-                                sh "curl -v --fail --max-time 10 ${appUrl}/ || exit 1"
+                                sh "curl -v --fail --max-time 10 ${appUrl}/"
                                 success = true
                             } catch (Exception e) {
                                 echo "Attempt ${++attempt}/${maxAttempts} failed: ${e.message}"
-                                sleep 5 // Wait 5 seconds before retrying
+                                sleep 5
                             }
                         }
 
                         if (!success) {
                             error "Smoke test failed after ${maxAttempts} attempts."
                         } else {
-                            echo "Smoke Test Passed!"
+                            echo "✅ Smoke Test Passed!"
                         }
                     }
                 }
             }
         }
+
     }
 
     post {
