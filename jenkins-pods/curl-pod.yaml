@@ -1,4 +1,5 @@
 
+# jenkins-pods/curl-pod.yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -11,7 +12,11 @@ spec:
     - name: curl
       image: bitnami/kubectl:latest
       command: [ "/bin/sh", "-ce" ]
-      args: [ "tail -f /dev/null" ]
+      args:
+        - | 
+          # Attempt to install curl, as bitnami/kubectl might not include it by default
+          apk add --no-cache curl || true
+          tail -f /dev/null # Keep container running
       volumeMounts:
       - mountPath: "/home/jenkins/agent"
         name: "workspace-volume"
