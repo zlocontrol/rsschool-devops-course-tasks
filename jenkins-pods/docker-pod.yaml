@@ -9,6 +9,8 @@ spec:
   containers:
     - name: docker
       image: docker:dind
+      command: [ "/bin/sh", "-ce" ]
+      args: [ "tail -f /dev/null" ]
       securityContext:
         privileged: true
       resources:

@@ -9,9 +9,8 @@ spec:
   containers:
     - name: python
       image: python:3.9
-      command:
-        - cat
-      tty: true
+      command: ["/bin/sh", "-ce"]
+      args: ["tail -f /dev/null"]
     - name: jnlp
       image: jenkins/inbound-agent:3309.v27b_9314fd1a_4-1
       args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
