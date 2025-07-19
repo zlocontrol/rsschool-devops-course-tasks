@@ -815,4 +815,77 @@ If direct access to the NodePort is restricted or you prefer tunneling, you can 
   You should see the message: **"Hello, Flask!"**
 ---
 # task_6
->>>>>>> Stashed changes
+>>>>>>> 
+
+ Jenkins Pipeline + Kubernetes
+ What it does
+A full CI/CD pipeline for a Flask application:
+
+Building a Docker image
+
+Running unit tests
+
+Deploying to Kubernetes using Helm
+
+Smoke Test (curl request to the service)
+
+⚙️ How to Run
+1️⃣ Install Jenkins in Kubernetes
+bash
+Копировать
+Редактировать
+helm repo add jenkins https://charts.jenkins.io
+helm repo update
+
+kubectl create namespace jenkins
+
+helm install jenkins jenkins/jenkins \
+  -n jenkins \
+  -f jenkins/values.yaml
+2️⃣ Create RBAC for Jenkins
+bash
+Копировать
+Редактировать
+kubectl apply -f jenkins/jenkins-rbac.yaml
+3️⃣ Expose Jenkins via Port Forwarding
+bash
+Копировать
+Редактировать
+minikube service jenkins -n jenkins --url
+🖥️ Configure Kubernetes Cloud in Jenkins
+Dashboard → Manage Jenkins → Configure Clouds → Add new Cloud → Kubernetes
+
+Field	Value
+Name	Any name (e.g., Kube)
+Kubernetes URL	https://kubernetes.default.svc
+Kubernetes Namespace	jenkins
+Jenkins URL	http://jenkins.jenkins.svc.cluster.local:8080/
+Jenkins Tunnel	jenkins-agent.jenkins.svc.cluster.local:50000
+Credentials	ServiceAccount with cluster-admin rights
+
+📂 File Structure
+File/Folder	Description
+Jenkinsfile	Defines the CI/CD pipeline steps
+flask-app/	Root directory of the Flask application
+flask-app/Dockerfile	Instructions for building the Docker image
+flask-app/helm/	Helm chart for deploying the app to Kubernetes
+flask-app/main.py	Main file of the Flask application
+flask-app/requirements.txt	Python dependencies
+
+jenkins/	Jenkins configuration files
+
+jenkins/values.yaml	Custom values for Helm installation of Jenkins
+jenkins/jenkins-rbac.yaml	RBAC for Jenkins to access Kubernetes API
+jenkins/jenkins-sa-token.yaml	Optional ServiceAccount token file
+jenkins-pods/	Kubernetes pod agent definitions for Jenkins
+jenkins-pods/docker-pod.yaml	Pod agent for Docker image build
+jenkins-pods/python-pod.yaml	Pod agent for running Python unit tests
+jenkins-pods/helm-pod.yaml	Pod agent for Helm deployment
+jenkins-pods/curl-pod.yaml	Pod agent for Smoke Test (curl request)
+
+ In Progress:
+SonarQube analysis
+
+k3s check
+
+Notifications
