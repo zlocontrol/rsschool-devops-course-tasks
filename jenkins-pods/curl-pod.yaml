@@ -6,12 +6,12 @@ metadata:
     jenkins: curl
   namespace: jenkins
 spec:
+  serviceAccountName: jenkins
   containers:
     - name: curl
       image: curlimages/curl:8.8.0
-      command:
-        - cat
-      tty: true
+      command: [ "/bin/sh", "-ce" ]
+      args: [ "tail -f /dev/null" ]
     - name: jnlp
       image: jenkins/inbound-agent:3309.v27b_9314fd1a_4-1
       args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
