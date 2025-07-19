@@ -4,6 +4,7 @@ kind: Pod
 metadata:
   labels:
     jenkins: docker
+  namespace: jenkins
 spec:
   containers:
     - name: docker

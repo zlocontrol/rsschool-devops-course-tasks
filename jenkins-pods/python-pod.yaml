@@ -4,6 +4,7 @@ kind: Pod
 metadata:
   labels:
     jenkins: python
+  namespace: jenkins
 spec:
   containers:
     - name: python

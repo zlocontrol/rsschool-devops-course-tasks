@@ -4,6 +4,7 @@ kind: Pod
 metadata:
   labels:
     jenkins: helm
+  namespace: jenkins
 spec:
   serviceAccountName: jenkins
   containers:
