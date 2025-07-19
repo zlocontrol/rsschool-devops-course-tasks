@@ -77,15 +77,32 @@ pipeline {
 
                         def appUrl = "http://${serviceName}.${namespace}.svc.cluster.local:${servicePort}"
 
-                        echo "Waiting for deployment to be ready..."
-                        sh "kubectl -n ${namespace} rollout status deployment/${serviceName} --timeout=120s"
-
                         echo "Performing smoke test on: ${appUrl}"
-                        sh "curl -v --fail --max-time 10 ${appUrl}/"
+
+                        def maxAttempts = 10
+                        def attempt = 0
+                        def success = false
+
+                        while (attempt < maxAttempts && !success) {
+                            try {
+                                sh "curl -v --fail --max-time 10 ${appUrl}/"
+                                success = true
+                            } catch (Exception e) {
+                                echo "Attempt ${++attempt}/${maxAttempts} failed: ${e.message}"
+                                sleep 5
+                            }
+                        }
+
+                        if (!success) {
+                            error "Smoke test failed after ${maxAttempts} attempts."
+                        } else {
+                            echo " Smoke Test Passed!"
+                        }
                     }
                 }
             }
         }
+
 
 
     }
