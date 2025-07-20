@@ -866,13 +866,13 @@ Credentials	ServiceAccount with cluster-admin rights
 📂 File Structure
 File/Folder	Description
 Jenkinsfile	Defines the CI/CD pipeline steps
-flask-app/	Root directory of the Flask application
-flask-app/Dockerfile	Instructions for building the Docker image
-flask-app/helm/	Helm chart for deploying the app to Kubernetes
-flask-app/main.py	Main file of the Flask application
-flask-app/requirements.txt	Python dependencies
+- flask-app/	Root directory of the Flask application
+- flask-app/Dockerfile	Instructions for building the Docker image
+- flask-app/helm/	Helm chart for deploying the app to Kubernetes
+- flask-app/main.py	Main file of the Flask application
+- flask-app/requirements.txt	Python dependencies
 
-jenkins/	Jenkins configuration files
+- jenkins/	Jenkins configuration files
 
 jenkins/values.yaml	Custom values for Helm installation of Jenkins
 jenkins/jenkins-rbac.yaml	RBAC for Jenkins to access Kubernetes API

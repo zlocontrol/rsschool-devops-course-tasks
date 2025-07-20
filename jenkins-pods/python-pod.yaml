@@ -6,11 +6,19 @@ metadata:
     jenkins: python
   namespace: jenkins
 spec:
+  serviceAccountName: jenkins
   containers:
     - name: python
       image: python:3.9
       command: ["/bin/sh", "-ce"]
       args: ["tail -f /dev/null"]
+      volumeMounts:
+        - name: pip-cache
+          mountPath: /root/.cache/pip
     - name: jnlp
       image: jenkins/inbound-agent:3309.v27b_9314fd1a_4-1
       args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
+  volumes:
+    - name: pip-cache
+      emptyDir: {}
+

@@ -7,6 +7,7 @@ pipeline {
         IMAGE_TAG = "build-${BUILD_NUMBER}"
         HELM_RELEASE = 'flask-app-release'
         CHART_PATH = './flask-app'
+        SONAR_HOST_URL = 'http://sonarqube-sonarqube.sonarqube.svc.cluster.local:9000'
     }
 
     stages {
@@ -43,6 +44,40 @@ pipeline {
                 }
             }
         }
+
+        stage('SonarCloud Analysis') {
+            agent {
+                kubernetes {
+                    yamlFile 'jenkins-pods/python-pod.yaml'
+                }
+            }
+            environment {
+                SONAR_TOKEN = credentials('sonar-token-id')
+            }
+            steps {
+                container('python') {
+                    dir("${APP_NAME}") {
+                        sh '''
+                        apt-get update -qq && apt-get install -y unzip wget openjdk-17-jre-headless
+                        wget -q https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+                        unzip -q sonar-scanner-cli-*.zip
+                        mv sonar-scanner-5.0.1.3006-linux sonar-scanner
+                        export PATH=$PWD/sonar-scanner/bin:$PATH
+
+                        sonar-scanner \
+                          -Dsonar.projectKey=rsschool-devops-course-tasks \
+                          -Dsonar.organization=ihor-rukavitsyn \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=https://sonarcloud.io \
+                          -Dsonar.login=$SONAR_TOKEN
+                        '''
+                    }
+                }
+            }
+        }
+
+
+
 
         stage('Helm Deploy') {
             agent {
