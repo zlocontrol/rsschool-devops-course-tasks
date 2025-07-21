@@ -7,8 +7,14 @@ image:
 
 containerPort: 8080
 
+#service:
+#  type: NodePort
+#  port: 8080
+#  targetPort: 8080
+#  nodePort: 30081
+
+
 service:
-  type: NodePort
+  type: ClusterIP
   port: 8080
   targetPort: 8080
-  nodePort: 30081

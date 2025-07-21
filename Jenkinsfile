@@ -69,6 +69,7 @@ pipeline {
 
                         export PYTHONPATH=$(pwd)
                         pytest --cov=flask_app --cov-report=xml || echo "No tests found, skipping"
+                        ls -l coverage.xml
                         '''
                     }
                 }
