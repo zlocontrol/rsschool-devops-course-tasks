@@ -8,6 +8,8 @@ pipeline {
         HELM_RELEASE = 'flask-app-release'
         CHART_PATH = './flask-app'
         DOCKER_USER = 'igor237'
+        MAIL = 'cantaktget@gmail.com
+'
 
     }
 
@@ -175,12 +177,19 @@ pipeline {
 
     }
 
-    post {
-        success {
-            echo "Pipeline succeeded"
+        post {
+            success {
+                echo "Pipeline succeeded"
+                mail to: ${MAIL},
+                     subject: "Pipeline SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                     body: "Good news! The pipeline completed successfully."
+            }
+            failure {
+                echo "Pipeline failed"
+                mail to: ${MAIL},
+                     subject: "Pipeline FAILURE: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                     body: "Something went wrong. Please check the pipeline logs."
+            }
         }
-        failure {
-            echo "Pipeline failed"
-        }
-    }
+
 }
