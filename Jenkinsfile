@@ -7,7 +7,7 @@ pipeline {
         IMAGE_TAG = "build-${BUILD_NUMBER}"
         HELM_RELEASE = 'flask-app-release'
         CHART_PATH = './flask-app'
-        SONAR_HOST_URL = 'http://sonarqube-sonarqube.sonarqube.svc.cluster.local:9000'
+
     }
 
     stages {
@@ -64,17 +64,13 @@ pipeline {
                         mv sonar-scanner-5.0.1.3006-linux sonar-scanner
                         export PATH=$PWD/sonar-scanner/bin:$PATH
 
-                        sonar-scanner \
-                          -Dsonar.projectKey=rsschool-devops-course-tasks \
-                          -Dsonar.organization=ihor-rukavitsyn \
-                          -Dsonar.sources=. \
-                          -Dsonar.host.url=https://sonarcloud.io \
-                          -Dsonar.login=$SONAR_TOKEN
+                        sonar-scanner -Dsonar.login=$SONAR_TOKEN
                         '''
                     }
                 }
             }
         }
+
 
 
 
