@@ -122,7 +122,7 @@ pipeline {
                 container('helm') {
                     sh """
                     helm upgrade --install ${HELM_RELEASE} ${CHART_PATH} \\
-                    --set image.repository=${DOCKER_USER}/my-flask-app
+                    --set image.repository=igor237/my-flask-app \\
                     --set image.tag=${IMAGE_TAG} \\
                     --set image.pullPolicy=IfNotPresent
                     """
