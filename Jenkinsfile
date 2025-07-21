@@ -7,6 +7,7 @@ pipeline {
         IMAGE_TAG = "build-${BUILD_NUMBER}"
         HELM_RELEASE = 'flask-app-release'
         CHART_PATH = './flask-app'
+        DOCKER_USER = 'igor237'
 
     }
 
@@ -26,6 +27,32 @@ pipeline {
                 }
             }
         }
+
+        stage('Docker Push') {
+            agent {
+                kubernetes {
+                    yamlFile 'jenkins-pods/docker-pod.yaml'
+                }
+            }
+            steps {
+                container('docker') {
+                    dir("${APP_NAME}") {
+                        withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                            sh '''
+                            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                            docker tag ${IMAGE_NAME}:${IMAGE_TAG} igor237/my-flask-app:${IMAGE_TAG}
+                            docker push igor237/my-flask-app:${IMAGE_TAG}
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+
+
+
+
 
         stage('Unit Tests') {
             agent {
@@ -95,7 +122,7 @@ pipeline {
                 container('helm') {
                     sh """
                     helm upgrade --install ${HELM_RELEASE} ${CHART_PATH} \\
-                    --set image.repository=${IMAGE_NAME} \\
+                    --set image.repository=${DOCKER_USER}/my-flask-app
                     --set image.tag=${IMAGE_TAG} \\
                     --set image.pullPolicy=IfNotPresent
                     """
