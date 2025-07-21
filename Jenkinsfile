@@ -45,6 +45,7 @@ pipeline {
             }
         }
 
+
         stage('SonarCloud Analysis') {
             agent {
                 kubernetes {
@@ -53,6 +54,8 @@ pipeline {
             }
             environment {
                 SONAR_TOKEN = credentials('sonar-token-id')
+
+                SONAR_SERVER_URL = "https://sonarcloud.io" //
             }
             steps {
                 container('python') {
@@ -64,7 +67,8 @@ pipeline {
                         mv sonar-scanner-5.0.1.3006-linux sonar-scanner
                         export PATH=$PWD/sonar-scanner/bin:$PATH
 
-                        sonar-scanner -Dsonar.login=$SONAR_TOKEN
+
+                        sonar-scanner -Dsonar.login=$SONAR_TOKEN -Dsonar.host.url=$SONAR_SERVER_URL
                         '''
                     }
                 }
