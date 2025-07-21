@@ -113,22 +113,21 @@ pipeline {
 
 
         stage('Helm Deploy') {
-            agent {
-                kubernetes {
-                    yamlFile 'jenkins-pods/helm-pod.yaml'
+                    agent {
+                        kubernetes {
+                            yamlFile 'jenkins-pods/helm-pod.yaml'
+                        }
+                    }
+                    steps {
+                        container('helm') {
+                            sh """
+                            helm upgrade --install ${HELM_RELEASE} ${CHART_PATH} --set image.repository=igor237/my-flask-app --set image.tag=${IMAGE_TAG} --set image.pullPolicy=IfNotPresent
+                            """
+                        }
+                    }
                 }
-            }
-            steps {
-                container('helm') {
-                    sh """
-                    helm upgrade --install ${HELM_RELEASE} ${CHART_PATH} \\
-                    --set image.repository=igor237/my-flask-app \\
-                    --set image.tag=${IMAGE_TAG} \\
-                    --set image.pullPolicy=IfNotPresent
-                    """
-                }
-            }
-        }
+
+
         stage('Smoke Test') {
             agent {
                 kubernetes {
