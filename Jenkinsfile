@@ -8,7 +8,7 @@ pipeline {
         HELM_RELEASE = 'flask-app-release'
         CHART_PATH = './flask-app'
         DOCKER_USER = 'igor237'
-        MAIL = 'cantaktget@gmail.com
+        MAIL = 'cantaktget@gmail.com'
 '
 
     }
