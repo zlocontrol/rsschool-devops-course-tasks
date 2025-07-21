@@ -180,13 +180,13 @@ pipeline {
         post {
             success {
                 echo "Pipeline succeeded"
-                mail to: ${MAIL},
+                mail to: "${MAIL}",
                      subject: "Pipeline SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                      body: "Good news! The pipeline completed successfully."
             }
             failure {
                 echo "Pipeline failed"
-                mail to: ${MAIL},
+                mail to: "${MAIL}",
                      subject: "Pipeline FAILURE: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                      body: "Something went wrong. Please check the pipeline logs."
             }
