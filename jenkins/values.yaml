@@ -1,10 +1,10 @@
-
+#jenkins/values.yaml
 
 
 controller:
   admin:
     username: admin
-    password: git
+    password: mySuperSecurePassword123
 
   image:
     registry: docker.io
