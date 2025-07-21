@@ -62,6 +62,8 @@ pipeline {
                     dir("${APP_NAME}") {
                         sh '''
                         apt-get update -qq && apt-get install -y unzip wget openjdk-17-jre-headless
+                        find . -name "__pycache__" -exec rm -rf {} +
+                        find . -name "*.pyc" -delete
                         wget -q https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
                         unzip -q sonar-scanner-cli-*.zip
                         mv sonar-scanner-5.0.1.3006-linux sonar-scanner
