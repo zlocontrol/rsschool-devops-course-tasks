@@ -37,13 +37,17 @@ pipeline {
                 container('python') {
                     dir("${APP_NAME}") {
                         sh '''
-                        pip install -r requirements.txt || true
-                        pytest || echo "No tests found, skipping"
+                        pip install -r requirements.txt
+                        pip install pytest pytest-cov
+
+                        export PYTHONPATH=$(pwd)
+                        pytest --cov=flask_app --cov-report=xml || echo "No tests found, skipping"
                         '''
                     }
                 }
             }
         }
+
 
 
         stage('SonarCloud Analysis') {
