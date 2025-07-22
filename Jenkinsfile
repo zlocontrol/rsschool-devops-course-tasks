@@ -70,7 +70,7 @@ pipeline {
                         pip install pytest pytest-cov
 
                         export PYTHONPATH=$(pwd)
-                        pytest --cov=flask_app --cov-report=xml || echo "No tests found, skipping"
+                        pytest --cov=flask_app --cov-report=xml
                         ls -l coverage.xml
                         '''
                     }

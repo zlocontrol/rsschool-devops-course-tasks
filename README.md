@@ -815,77 +815,267 @@ If direct access to the NodePort is restricted or you prefer tunneling, you can 
   You should see the message: **"Hello, Flask!"**
 ---
 # task_6
->>>>>>> 
+## Task 6: CI/CD for a Flask Application Using Jenkins Pipeline
+#### Description
+This project sets up a Jenkins Pipeline for the complete CI/CD cycle of deploying a Flask application into Kubernetes:
 
- Jenkins Pipeline + Kubernetes
- What it does
-A full CI/CD pipeline for a Flask application:
+- Building a Docker image
 
-Building a Docker image
+- Running unit tests with coverage
 
-Running unit tests
+- Code quality and security analysis via SonarCloud
 
-Deploying to Kubernetes using Helm
+- Pushing the Docker image to DockerHub
 
-Smoke Test (curl request to the service)
+- Deploying to Kubernetes using Helm
 
-⚙️ How to Run
-1️⃣ Install Jenkins in Kubernetes
-bash
-Копировать
-Редактировать
+- Smoke testing (service availability check using curl)
+
+- Email notifications about pipeline status
+
+📂 Project File Structure
+```
+.
+├── flask-app/              # Flask app + Helm chart
+│   ├── Dockerfile
+│   ├── Chart.yaml
+│   ├── templates/
+│   └── tests/test_app.py
+├── jenkins/
+│   ├── values.yaml         # Jenkins configuration (includes Mailer settings)
+│   └── jenkins-rbac.yaml   # RBAC for Jenkins
+├── jenkins-pods/           # Pod templates for Jenkins agents
+│   ├── docker-pod.yaml
+│   ├── python-pod.yaml
+│   ├── helm-pod.yaml
+│   └── curl-pod.yaml
+├── Jenkinsfile             # Pipeline definition
+└── README.md
+```
+### How to Run 
+Install Jenkins in Kubernetes
+
+```
 helm repo add jenkins https://charts.jenkins.io
 helm repo update
 
 kubectl create namespace jenkins
+```
 
+```
 helm install jenkins jenkins/jenkins \
   -n jenkins \
   -f jenkins/values.yaml
-2️⃣ Create RBAC for Jenkins
-bash
-Копировать
-Редактировать
-kubectl apply -f jenkins/jenkins-rbac.yaml
-3️⃣ Expose Jenkins via Port Forwarding
-bash
-Копировать
-Редактировать
-minikube service jenkins -n jenkins --url
-🖥️ Configure Kubernetes Cloud in Jenkins
-Dashboard → Manage Jenkins → Configure Clouds → Add new Cloud → Kubernetes
+```
 
-Field	Value
-Name	Any name (e.g., Kube)
-Kubernetes URL	https://kubernetes.default.svc
-Kubernetes Namespace	jenkins
-Jenkins URL	http://jenkins.jenkins.svc.cluster.local:8080/
-Jenkins Tunnel	jenkins-agent.jenkins.svc.cluster.local:50000
-Credentials	ServiceAccount with cluster-admin rights
+-  Set Up RBAC for Jenkins
 
-📂 File Structure
-File/Folder	Description
-Jenkinsfile	Defines the CI/CD pipeline steps
-- flask-app/	Root directory of the Flask application
-- flask-app/Dockerfile	Instructions for building the Docker image
-- flask-app/helm/	Helm chart for deploying the app to Kubernetes
-- flask-app/main.py	Main file of the Flask application
-- flask-app/requirements.txt	Python dependencies
 
-- jenkins/	Jenkins configuration files
 
-jenkins/values.yaml	Custom values for Helm installation of Jenkins
-jenkins/jenkins-rbac.yaml	RBAC for Jenkins to access Kubernetes API
-jenkins/jenkins-sa-token.yaml	Optional ServiceAccount token file
-jenkins-pods/	Kubernetes pod agent definitions for Jenkins
-jenkins-pods/docker-pod.yaml	Pod agent for Docker image build
-jenkins-pods/python-pod.yaml	Pod agent for running Python unit tests
-jenkins-pods/helm-pod.yaml	Pod agent for Helm deployment
-jenkins-pods/curl-pod.yaml	Pod agent for Smoke Test (curl request)
+`kubectl apply -f jenkins/jenkins-rbac.yaml`
 
- In Progress:
-SonarQube analysis
+- Forward Port to Access Jenkins (if using Minikube)
 
-k3s check
+`minikube service jenkins -n jenkins --url`
 
-Notifications
+#### Jenkins Configuration
+Kubernetes Cloud:
+
+Go to Manage Jenkins → Configure Clouds → Add new Cloud → Kubernetes
+
+Fill in the fields:
+
+##### Field	Value
+- Name	Kube
+- Kubernetes URL	https://kubernetes.default.svc
+- Kubernetes Namespace	jenkins
+- Jenkins URL	http://jenkins.jenkins.svc.cluster.local:8080/
+- Jenkins Tunnel	jenkins-agent.jenkins.svc.cluster.local:50000
+Credentials	ServiceAccount with cluster-admin permissions
+
+### DockerHub Token Setup
+Why?
+Jenkins uses an Access Token (not a password) to push images to DockerHub.
+
+How to create it?
+
+Go to DockerHub → Settings → Security
+
+Click New Access Token
+
+Name the token and select Read/Write (R/W) access
+
+Copy the token (it will be shown only once)
+
+Add to Jenkins:
+
+Go to Manage Jenkins → Manage Credentials → (global) → Add Credentials
+
+Fill in:
+
+#### Field	Value
+- Kind	Username with password
+- Username	Your DockerHub login (e.g., igor237)
+- Password	Your DockerHub Access Token
+- ID	docker-hub-creds
+
+### Email Notification Setup
+#### Create an App Password for Gmail
+
+- Enable 2FA in your Google account
+
+- Go to Google → Security → App Passwords
+
+- Create a new password for Mail → Other (Jenkins)
+
+- Copy the 16-character token
+
+- Add to jenkins/values.yaml:
+```
+email-config: |
+  unclassified:
+    location:
+      adminAddress: "your_email@gmail.com"
+    mailer:
+      smtpHost: "smtp.gmail.com"
+      smtpPort: "465"
+      useSsl: true
+      smtpAuthUsername: "your_email@gmail.com"
+      smtpAuthPassword: "YOUR_APP_PASSWORD"
+```
+### Apply the changes:
+````
+helm upgrade jenkins jenkins/jenkins -n jenkins -f jenkins/values.yaml
+
+````
+
+## SonarCloud Setup
+Why?
+### SonarCloud checks:
+
+- Code quality
+
+- Vulnerabilities
+
+- Test coverage (coverage.xml)
+
+1. ##### Create a SonarCloud Account
+Go to https://sonarcloud.io and sign up via GitHub.
+
+2.  ##### Create a Project in SonarCloud
+Click + Create new project
+
+Choose Manual
+
+Fill in the following:
+##### exemple
+- Field	Value
+- Organization	zlocontrol 
+- Project Key	zlocontrol_rsschool-devops-course-tasks
+- Project Name	rsschool-devops-course-tasks
+
+3. ##### Generate a Sonar Token
+Go to My Account → Security
+
+Click Generate Token and save the token (it is shown only once)
+
+4. ##### Add the Token to Jenkins
+In Jenkins:
+
+Manage Jenkins → Manage Credentials → (global) → Add Credentials
+
+- Field	Value
+- Kind	Secret text
+- ID	sonar-token-id
+- Secret	Your SonarCloud Token
+
+5. ##### Create sonar-project.properties
+
+`In flask-app/sonar-project.properties, add:`
+
+```
+sonar.organization=zlocontrol
+sonar.projectKey=zlocontrol_rsschool-devops-course-tasks
+sonar.projectName=rsschool-devops-course-tasks
+sonar.host.url=https://sonarcloud.io
+sonar.login=${SONAR_TOKEN}
+sonar.sources=.
+sonar.exclusions=tests/**
+sonar.tests=tests
+sonar.python.version=3.11
+sonar.python.coverage.reportPaths=coverage.xml
+```
+6. ##### Configure Sonar in Jenkinsfile
+The Jenkinsfile already includes:
+
+```groovy
+stage('SonarCloud Analysis') {
+    agent {
+        kubernetes {
+            yamlFile 'jenkins-pods/python-pod.yaml'
+        }
+    }
+    environment {
+        SONAR_TOKEN = credentials('sonar-token-id')
+        SONAR_SERVER_URL = "https://sonarcloud.io"
+    }
+    steps {
+        container('python') {
+            dir("${APP_NAME}") {
+                sh '''
+                apt-get update -qq && apt-get install -y unzip wget openjdk-17-jre-headless
+                wget -q https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+                unzip -q sonar-scanner-cli-*.zip
+                mv sonar-scanner-5.0.1.3006-linux sonar-scanner
+                export PATH=$PWD/sonar-scanner/bin:$PATH
+
+                sonar-scanner -Dsonar.login=$SONAR_TOKEN -Dsonar.host.url=$SONAR_SERVER_URL
+                '''
+            }
+        }
+    }
+}
+```
+7. ##### Verification
+After running the pipeline:
+
+Go to https://sonarcloud.io/dashboard
+
+Check the status of the rsschool-devops-course-tasks project
+
+
+
+
+
+
+
+## Running the Pipeline
+Push your changes to the task_6 branch in the repository.
+
+Jenkins will automatically trigger the pipeline.
+
+##### Pipeline Stages Description
+
+- Docker Build	Build the Docker image
+- Docker Push	Push the image to DockerHub (igor237/my-flask-app)
+- Unit Tests	Run pytest and generate coverage.xml
+- SonarCloud Analysis	Analyze code quality and security
+- Helm Deploy	Deploy to Kubernetes via Helm
+- Smoke Test	Check service availability with curl
+- Email notifications about pipeline status
+
+##### Verification
+The application is available at:
+
+
+http://flask-app-release.jenkins.svc.cluster.local:8080/
+Pipeline results are sent via email notifications.
+
+ Additional Notes
+All artifacts (Dockerfile, Helm chart) are stored in Git
+
+Docker images are pushed to DockerHub
+
+Code is analyzed via SonarCloud
+
+Jenkins uses pod-based agents through Kubernetes Cloud
