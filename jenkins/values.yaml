@@ -9,9 +9,10 @@ controller:
   startupProbe:
     httpGet:
       path: "/login"
-      port: http
+      port: 8080
     failureThreshold: 30
     periodSeconds: 10
+
 
 
 
@@ -69,17 +70,34 @@ controller:
               - string:
                   scope: GLOBAL
                   id: sonar-token-id
-                  secret: "a390c70a3175877e3345d5839057375510aee9a6" # tempory
+                  secret: "a390c70a3175877e3345d5839057375510aee9a6"
                   description: "SonarCloud token for pipeline"
-        
 
-      email-config: |
-        unclassified:
-          location:
-            adminAddress: "admin@example.com"
-          mailer:
-            smtpHost: "smtp.gmail.com"
-            smtpPort: "465"
-            useSsl: true
-            smtpAuthUsername: "your_test_email@gmail.com"
-            smtpAuthPassword: "fake-password"
+      docker-token: |
+        credentials:
+          system:
+            domainCredentials:
+            - credentials:
+              - usernamePassword:
+                  scope: GLOBAL
+                  id: docker-hub-creds
+                  username: "igor237"
+                  password: "a390c70a3175877e3345d5839057375510aee9a6"
+                  description: "DockerHub credentials for pushing images"
+
+
+
+
+
+
+#
+#      email-config: |
+#        unclassified:
+#          location:
+#            adminAddress: "admin@example.com"
+#          mailer:
+#            smtpHost: "smtp.gmail.com"
+#            smtpPort: "465"
+#            useSsl: true
+#            smtpAuthUsername: "your_test_email@gmail.com"
+#            smtpAuthPassword: "fake-password"

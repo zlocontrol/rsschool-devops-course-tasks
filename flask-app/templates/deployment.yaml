@@ -18,3 +18,6 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.containerPort }}
+          envFrom:
+            - configMapRef:
+                name: { { .Release.Name } }-configmap

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-configmap
+data:
+  FLASK_ENV: production
+  APP_NAME: MyFlaskApp
+  CUSTOM_MESSAGE: "Hello from ConfigMap!"

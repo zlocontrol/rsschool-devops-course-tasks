@@ -1,13 +1,11 @@
-#monitoring/grafana-values.yaml
-admin:
-  existingSecret: ""         # если используешь секрет — иначе задай ниже
-  user: admin
-  password: admin123         # не забудь заменить на что-то безопасное
+
+adminUser: admin
+adminPassword: admin123
 
 service:
   type: NodePort
   port: 3000
-  nodePort: 30080            # можешь изменить, если порт занят
+  nodePort: 30095
 
 datasources:
   datasources.yaml:
@@ -42,9 +40,3 @@ dashboardProviders:
         editable: true
         options:
           path: /var/lib/grafana/dashboards/default
-
-#dashboards:
-#  default:
-#    node-exporter-full:
-#      json: |
-#        ${JSON_СЮДА}   # Можно вставить экспорт из Grafana Web UI
