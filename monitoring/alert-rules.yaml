@@ -1,0 +1,43 @@
+# group rule kube & app
+groups:
+  - name: node-and-app-alerts
+    rules:
+
+      - alert: HighCpuUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: " CPU  {{ $labels.instance }}"
+          description: "CPU  {{ $labels.instance }} используется на {{ $value | humanizePercentage }}."
+
+      # memory
+      - alert: LowMemoryAvailable
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100) < 20
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "low of memory {{ $labels.instance }}"
+          description: "На узле {{ $labels.instance }} доступно только {{ $value | humanizePercentage }} памяти."
+
+      # data drive
+      - alert: HighDiskUsage
+        expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_avail_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Higt drive {{ $labels.instance }} ({{ $labels.mountpoint }})"
+          description: "Drive on node {{ $labels.instance }} ({{ $labels.mountpoint }}) используется на {{ $value | humanizePercentage }}."
+
+      # request is Flask
+      - alert: HighFlaskRequestRate
+        expr: rate(http_requests_total{job="flask-app"}[1m]) > 10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Flask({{ $labels.instance }})"
+          description: "Flask- {{ $labels.instance }} получает {{ $value }} ."

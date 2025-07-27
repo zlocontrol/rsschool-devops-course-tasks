@@ -1,0 +1,47 @@
+# Удалите эти две строки, если они у вас были на верхнем уровне
+# adminUser: admin
+# adminPassword: admin123
+
+# Добавьте или обновите эту секцию
+admin:
+  user: "admin"
+  password: "admin123" # <-- ПРАВИЛЬНОЕ МЕСТО ДЛЯ ПАРОЛЯ
+
+service:
+  type: NodePort
+  port: 3000
+  nodePort: 30095
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus-server.monitoring.svc.cluster.local
+        isDefault: true
+
+persistence:
+  enabled: false
+
+smtp:
+  enabled: true
+  host: smtp.example.com:587
+  user: user@example.com
+  password: password
+  from_address: alerts@example.com
+  skip_verify: true
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: default
+        orgId: 1
+        folder: ""
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
