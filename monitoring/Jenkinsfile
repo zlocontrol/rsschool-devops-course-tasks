@@ -1,0 +1,161 @@
+// monitoring/Jenkinsfile (ФИНАЛЬНАЯ ВЕРСИЯ - Секреты Grafana и Datasources в одном файле)
+
+pipeline {
+    agent none
+
+    options {
+        //
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        // --- base parameters ---
+        MONITORING_NAMESPACE      = 'monitoring'
+        PROMETHEUS_RELEASE_NAME   = 'prometheus'
+        GRAFANA_RELEASE_NAME      = 'grafana'
+
+        // YAML‑ pod‑ helm + kubectl
+        HELM_POD_YAML = 'jenkins-pods/helm-pod.yaml'
+
+        //
+        WAIT_TIMEOUT = '360s'
+    }
+
+    stages {
+        /* -------------------------------------------------- */
+        stage('Prepare Monitoring Environment') {
+            agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
+            steps {
+                container('helm') {
+                    script {
+                        echo 'Checking Kubernetes context…'
+                        sh 'kubectl config current-context'
+
+                        echo 'Adding/Updating Helm repos…'
+                        sh 'helm repo add bitnami https://charts.bitnami.com/bitnami || true'
+                        sh 'helm repo update'
+
+                        echo 'Ensuring helm‑diff plugin present…'
+                        sh 'helm plugin list | grep -q diff || helm plugin install https://github.com/databus23/helm-diff'
+
+                        echo 'Creating monitoring namespace (idempotent)…'
+                        sh "kubectl create namespace ${MONITORING_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -"
+                    }
+                }
+            }
+        }
+
+        /* -------------------------------------------------- */
+        stage('Apply Monitoring Secrets') {
+            agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
+            steps {
+                container('helm') {
+                    script {
+                        echo 'Applying grafana-admin-secret from file (includes datasources configuration)…'
+                        sh "kubectl apply -f monitoring/grafana-admin-secret.yaml -n ${MONITORING_NAMESPACE}"
+
+                        echo 'Applying grafana-smtp-secret from file…'
+                        sh "kubectl apply -f monitoring/grafana-smtp-secret.yaml -n ${MONITORING_NAMESPACE}"
+
+
+                    }
+                }
+            }
+        }
+
+        /* -------------------------------------------------- */
+        stage('Apply Grafana Dashboards ConfigMap') {
+            agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
+            steps {
+                container('helm') {
+                    echo 'Applying Grafana dashboards ConfigMap…'
+                    sh "kubectl apply -f monitoring/grafana-all-dashboards-configmap.yaml -n ${MONITORING_NAMESPACE}"
+                }
+            }
+        }
+
+        /* -------------------------------------------------- */
+        stage('Apply Prometheus Server ConfigMap (Alert Rules)') {
+            agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
+            steps {
+                container('helm') {
+                    echo 'Applying Prometheus server ConfigMap (with alert rules)…'
+                    sh "kubectl apply -f monitoring/current-prometheus-server-configmap.yaml -n ${MONITORING_NAMESPACE}"
+                }
+            }
+        }
+
+        /* ---------------- HELM DIFF + DEPLOY PROMETHEUS ---------------- */
+        stage('Preview Prometheus Changes') {
+            agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
+            steps {
+                container('helm') {
+                    echo 'Helm diff for Prometheus…'
+                    sh "helm diff upgrade ${PROMETHEUS_RELEASE_NAME} bitnami/prometheus -f monitoring/prometheus-values.yaml -n ${MONITORING_NAMESPACE} || true"
+                }
+            }
+        }
+
+        stage('Deploy Prometheus') {
+            agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
+            steps {
+                container('helm') {
+                    echo 'Deploying / Upgrading Prometheus…'
+                    sh "helm upgrade --install ${PROMETHEUS_RELEASE_NAME} bitnami/prometheus -f monitoring/prometheus-values.yaml -n ${MONITORING_NAMESPACE} --debug"
+
+                    echo 'Waiting for Prometheus server pod ready…'
+                    sh "kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=prometheus,app.kubernetes.io/component=server -n ${MONITORING_NAMESPACE} --timeout=${WAIT_TIMEOUT}"
+                }
+            }
+        }
+
+        /* ---------------- HELM DIFF + DEPLOY GRAFANA ---------------- */
+        stage('Preview Grafana Changes') {
+            agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
+            steps {
+                container('helm') {
+                    echo 'Helm diff for Grafana…'
+                    sh "helm diff upgrade ${GRAFANA_RELEASE_NAME} bitnami/grafana -f monitoring/grafana-values.yaml -n ${MONITORING_NAMESPACE} || true"
+                }
+            }
+        }
+
+        stage('Deploy Grafana') {
+            agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
+            steps {
+                container('helm') {
+                    echo 'Deploying / Upgrading Grafana…'
+                    sh "helm upgrade --install ${GRAFANA_RELEASE_NAME} bitnami/grafana -f monitoring/grafana-values.yaml -n ${MONITORING_NAMESPACE} --debug"
+
+                    echo 'Waiting for Grafana pod ready…'
+                    sh "kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=grafana -n ${MONITORING_NAMESPACE} --timeout=${WAIT_TIMEOUT}"
+                }
+            }
+        }
+
+        /* -------------------------------------------------- */
+        stage('Post‑Deployment Info') {
+            agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
+            steps {
+                container('helm') {
+                    script {
+                        echo 'Fetching Minikube IP…'
+                        def minikubeIp = sh(returnStdout: true, script: 'minikube ip').trim()
+
+                        echo "Grafana ➜ http://${minikubeIp}:30095/grafana/"
+                        echo "Prometheus ➜ http://${minikubeIp}:30090"
+                        echo "Alertmanager ➜ http://${minikubeIp}:30093"
+
+                        sh "kubectl get pods -n ${MONITORING_NAMESPACE}"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always   { echo 'Monitoring pipeline finished.' }
+        failure  { echo 'Monitoring pipeline FAILED – check logs.' }
+        success  { echo 'Monitoring pipeline completed successfully.' }
+    }
+}

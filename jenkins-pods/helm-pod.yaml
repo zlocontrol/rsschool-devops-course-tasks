@@ -7,12 +7,30 @@ metadata:
   namespace: jenkins
 spec:
   serviceAccountName: jenkins
+  securityContext:
+    fsGroup: 1000
   containers:
     - name: helm
-      image: alpine/helm:3.14.4
-      command: [ "/bin/sh", "-ce" ]
-      args: [ "tail -f /dev/null" ]
-
+      image: lachlaneale/kubectl-helm:latest
+      command: ["/bin/sh", "-ce"]
+      args: ["tail -f /dev/null"]
+      env:
+        - name: HELM_PLUGINS
+          value: /home/jenkins/.local/share/helm/plugins
+      resources:
+        requests:
+          cpu: "500m"
+          memory: "512Mi"
+        limits:
+          cpu: "1"
+          memory: "1Gi"
+      volumeMounts:
+        - name: helm-cache
+          mountPath: /home/jenkins/.cache
     - name: jnlp
       image: jenkins/inbound-agent:3309.v27b_9314fd1a_4-1
       args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
+  restartPolicy: Never
+  volumes:
+    - name: helm-cache
+      emptyDir: {}

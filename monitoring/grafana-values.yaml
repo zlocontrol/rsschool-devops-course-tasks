@@ -1,51 +1,89 @@
 
-    admin:
-      user: "admin"
-      password: "mySuperSecurePassword123"
 
-    service:
-      type: NodePort
-      ports:
-        grafana: 3000
-      nodePorts:
-        grafana: "30095"
 
-    datasources:
-      secretDefinition:
-        apiVersion: 1
-        datasources:
-          - name: Prometheus
-            type: prometheus
-            access: proxy
-            url: http://prometheus-server.monitoring.svc.cluster.local:9090
-            isDefault: true
+admin:
+  existingSecret: grafana-admin-secret
+  existingSecretUserKey: GF_SECURITY_ADMIN_USER
+  existingSecretPasswordKey: GF_SECURITY_ADMIN_PASSWORD
 
-    persistence:
-      enabled: false
 
-    smtp:
-      enabled: true
-      host: smtp.example.com:587
-      user: user@example.com
-      password: password
-      from_address: alerts@example.com
-      skip_verify: true
 
-    dashboardProviders:
-      config: # <-- Убедитесь, что это 'config'
-        default.yaml:
-          apiVersion: 1
-          providers:
-            - name: default
-              orgId: 1
-              folder: ""
-              type: file
-              disableDeletion: false
-              editable: true
-              options:
-                path: /var/lib/grafana/dashboards/default
+# === grafana.ini ===
+ini:
+  server:
+    root_url: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
+  smtp:
+    enabled: true
+    host: smtp.example.com:587
+    user: user@example.com
+    from_address: grafana@example.com
+    from_name: Grafana
+    passwordFromSecret: grafana-smtp-secret
+    passwordSecretKey: smtp-password
 
-    dashboardsConfigMaps:
-      - configMapName: grafana-flask-dashboard
-        subPath: flask_app_dashboard.json # <-- ОБЯЗАТЕЛЬНО РАСКОММЕНТИРУЙТЕ ЭТО!
-        # folderName: "Flask App" # Необязательно, но может помочь организовать
+
+grafana:
+  extraVolumes:
+
+    - name: grafana-dashboards-prov-config
+      configMap:
+        name: grafana-all-dashboards-configmap
+        items:
+          - key: dashboards.yaml
+            path: dashboards.yaml
+
+    - name: grafana-custom-dashboards-files
+      configMap:
+        name: grafana-all-dashboards-configmap
+        items:
+          - key: flask_app_dashboard.json
+            path: flask_app_dashboard.json
+          - key: kube_dashboard.json
+            path: kube_dashboard.json
+
+
+    - name: grafana-datasources-config
+      secret:
+        secretName: grafana-admin-secret
+        items:
+          - key: datasources.yaml
+            path: datasources.yaml
+
+  extraVolumeMounts:
+
+    - name: grafana-dashboards-prov-config
+      mountPath: /etc/grafana/provisioning/dashboards/dashboards.yaml
+      subPath: dashboards.yaml
+
+    - name: grafana-custom-dashboards-files
+      mountPath: /etc/grafana/provisioning/dashboards_from_configmap
+
+
+    - name: grafana-datasources-config
+      mountPath: /etc/grafana/provisioning/datasources/datasources.yaml
+      subPath: datasources.yaml
+
+
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 1001
+    allowPrivilegeEscalation: false
+
+  podSecurityContext:
+    enabled: true
+    fsGroup: 1001
+    runAsUser: 1001
+    runAsNonRoot: true
+
+
+
+service:
+  type: NodePort
+  ports:
+    grafana: 3000
+  nodePorts:
+    grafana: 30095
+
+
+persistence:
+  enabled: false

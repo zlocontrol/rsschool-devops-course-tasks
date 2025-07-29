@@ -1,7 +1,0 @@
-    server:
-      extraScrapeConfigs: |
-        - job_name: 'flask-app-debug'
-          metrics_path: /metrics
-          static_configs:
-            - targets:
-                - flask-app-release.jenkins.svc.cluster.local:8080

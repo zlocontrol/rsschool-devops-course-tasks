@@ -34,6 +34,15 @@ server:
             - node-exporter.monitoring.svc.cluster.local:9100
 
 
+  extraConfigmapMounts:
+    - name: prometheus-alert-rules
+      mountPath: /opt/bitnami/prometheus/rules/custom_rules.yaml
+      subPath: alert-rules.yaml
+      readOnly: true
+
+
+
+
 
   extraAlertmanagerConfig: |
     route:
