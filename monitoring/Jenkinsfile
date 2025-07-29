@@ -9,12 +9,13 @@ pipeline {
         MONITORING_NAMESPACE      = 'monitoring'
         PROMETHEUS_RELEASE_NAME   = 'prometheus'
         GRAFANA_RELEASE_NAME      = 'grafana'
-        HELM_POD_YAML = 'jenkins-pods/helm-pod.yaml'
-        WAIT_TIMEOUT = '360s'
+        HELM_POD_YAML             = 'jenkins-pods/helm-pod.yaml'
+        WAIT_TIMEOUT              = '360s'
     }
 
     stages {
-        stage('Prepare Monitoring Environment') {
+
+        stage('Prepare Monitoring Environment') { // Init helm, plugins, namespace
             agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
             steps {
                 container('helm') {
@@ -24,7 +25,7 @@ pipeline {
                         echo 'Adding/Updating Helm repos…'
                         sh 'helm repo add bitnami https://charts.bitnami.com/bitnami || true'
                         sh 'helm repo update'
-                        echo 'Ensuring helm‑diff plugin present…'
+                        echo 'Ensuring helm-diff plugin present…'
                         sh 'helm plugin list | grep -q diff || helm plugin install https://github.com/databus23/helm-diff'
                         echo 'Creating monitoring namespace (idempotent)…'
                         sh "kubectl create namespace ${MONITORING_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -"
@@ -33,120 +34,108 @@ pipeline {
             }
         }
 
-        stage('Apply Monitoring Secrets') {
+        stage('Apply Monitoring Secrets') { // Grafana credentials and SMTP
             agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
             steps {
                 container('helm') {
                     script {
-                        echo 'Applying grafana-admin-secret from file (includes datasources configuration)…'
                         sh "kubectl apply -f monitoring/grafana-admin-secret.yaml -n ${MONITORING_NAMESPACE}"
-                        echo 'Applying grafana-smtp-secret from file…'
                         sh "kubectl apply -f monitoring/grafana-smtp-secret.yaml -n ${MONITORING_NAMESPACE}"
                     }
                 }
             }
         }
 
-        stage('Apply Grafana Dashboards ConfigMap') {
+        stage('Apply Grafana Dashboards ConfigMap') { // Dashboards provisioning
             agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
             steps {
                 container('helm') {
-                    echo 'Applying Grafana dashboards ConfigMap…'
                     sh "kubectl apply -f monitoring/grafana-all-dashboards-configmap.yaml -n ${MONITORING_NAMESPACE}"
                 }
             }
         }
 
-        stage('Apply Prometheus Server ConfigMap (Alert Rules)') {
+        stage('Apply Prometheus Server ConfigMap (Alert Rules)') { // Alert rules
             agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
             steps {
                 container('helm') {
-                    echo 'Applying Prometheus server ConfigMap (with alert rules)…'
                     sh "kubectl apply -f monitoring/current-prometheus-server-configmap.yaml -n ${MONITORING_NAMESPACE}"
                 }
             }
         }
 
-        stage('Preview Prometheus Changes') {
+        stage('Preview Prometheus Changes') { // Helm diff for Prometheus
             agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
             steps {
                 container('helm') {
-                    echo 'Helm diff for Prometheus…'
                     sh "helm diff upgrade ${PROMETHEUS_RELEASE_NAME} bitnami/prometheus -f monitoring/prometheus-values.yaml -n ${MONITORING_NAMESPACE} || true"
                 }
             }
         }
 
-        stage('Deploy Prometheus') {
+        stage('Deploy Prometheus') { // Install or upgrade Prometheus
             agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
             steps {
                 container('helm') {
-                    echo 'Deploying / Upgrading Prometheus…'
                     sh "helm upgrade --install ${PROMETHEUS_RELEASE_NAME} bitnami/prometheus -f monitoring/prometheus-values.yaml -n ${MONITORING_NAMESPACE} --debug"
-                    echo 'Waiting for Prometheus server pod ready…'
                     sh "kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=prometheus,app.kubernetes.io/component=server -n ${MONITORING_NAMESPACE} --timeout=${WAIT_TIMEOUT}"
                 }
             }
         }
 
-        stage('Preview Grafana Changes') {
+        stage('Preview Grafana Changes') { // Helm diff for Grafana
             agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
             steps {
                 container('helm') {
-                    echo 'Helm diff for Grafana…'
                     sh "helm diff upgrade ${GRAFANA_RELEASE_NAME} bitnami/grafana -f monitoring/grafana-values.yaml -n ${MONITORING_NAMESPACE} || true"
                 }
             }
         }
 
-        stage('Deploy Grafana') {
+        stage('Deploy Grafana') { // Install or upgrade Grafana
             agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
             steps {
                 container('helm') {
-                    echo 'Deploying / Upgrading Grafana…'
                     sh "helm upgrade --install ${GRAFANA_RELEASE_NAME} bitnami/grafana -f monitoring/grafana-values.yaml -n ${MONITORING_NAMESPACE} --debug"
-                    echo 'Waiting for Grafana pod ready…'
                     sh "kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=grafana -n ${MONITORING_NAMESPACE} --timeout=${WAIT_TIMEOUT}"
                 }
             }
         }
 
-        stage('Post‑Deployment Info') {
+        stage('Post‑Deployment Info') { // Show service URLs and pod status
             agent { kubernetes { yamlFile "${HELM_POD_YAML}" } }
             steps {
                 container('helm') {
                     script {
-                        echo 'Fetching Kubernetes service information for external access…'
                         def grafanaServiceInfo = sh(returnStdout: true, script: "kubectl get svc ${GRAFANA_RELEASE_NAME} -n ${MONITORING_NAMESPACE} -o jsonpath='{.spec.ports[?(@.name==\"http\")].nodePort}'").trim()
                         def prometheusServiceInfo = sh(returnStdout: true, script: "kubectl get svc ${PROMETHEUS_RELEASE_NAME}-server -n ${MONITORING_NAMESPACE} -o jsonpath='{.spec.ports[?(@.name==\"http\")].nodePort}'").trim()
                         def alertmanagerServiceInfo = sh(returnStdout: true, script: "kubectl get svc ${PROMETHEUS_RELEASE_NAME}-alertmanager -n ${MONITORING_NAMESPACE} -o jsonpath='{.spec.ports[?(@.name==\"web\")].nodePort}'").trim()
-
                         def clusterNodeIp = sh(returnStdout: true, script: "kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type==\"InternalIP\")].address}'").trim()
 
                         echo "--------------------------------------------------------"
-                        echo "Информация о доступе к сервисам мониторинга:"
+                        echo "Monitoring service endpoints:"
                         echo "--------------------------------------------------------"
 
                         if (grafanaServiceInfo && clusterNodeIp) {
-                            echo "Grafana (внешний доступ, если NodePort активен) ➜ http://${clusterNodeIp}:${grafanaServiceInfo}/grafana/"
+                            echo "Grafana  http://${clusterNodeIp}:${grafanaServiceInfo}/grafana/"
                         } else {
-                            echo "Grafana (внутренний кластерный адрес) ➜ http://${GRAFANA_RELEASE_NAME}.${MONITORING_NAMESPACE}.svc.cluster.local:80"
+                            echo "Grafana  http://${GRAFANA_RELEASE_NAME}.${MONITORING_NAMESPACE}.svc.cluster.local:80"
                         }
 
                         if (prometheusServiceInfo && clusterNodeIp) {
-                            echo "Prometheus (внешний доступ, если NodePort активен) ➜ http://${clusterNodeIp}:${prometheusServiceInfo}"
+                            echo "Prometheus ➜ http://${clusterNodeIp}:${prometheusServiceInfo}"
                         } else {
-                            echo "Prometheus http://${PROMETHEUS_RELEASE_NAME}-server.${MONITORING_NAMESPACE}.svc.cluster.local:80"
+                            echo "Prometheus  http://${PROMETHEUS_RELEASE_NAME}-server.${MONITORING_NAMESPACE}.svc.cluster.local:80"
                         }
 
                         if (alertmanagerServiceInfo && clusterNodeIp) {
-                            echo "Alertmanager (внешний доступ, если NodePort активен) ➜ http://${clusterNodeIp}:${alertmanagerServiceInfo}"
+                            echo "Alertmanager  http://${clusterNodeIp}:${alertmanagerServiceInfo}"
                         } else {
                             echo "Alertmanager  http://${PROMETHEUS_RELEASE_NAME}-alertmanager.${MONITORING_NAMESPACE}.svc.cluster.local:80"
                         }
 
                         echo "--------------------------------------------------------"
-                        echo "Текущее состояние подов в namespace ${MONITORING_NAMESPACE}:"
+                        echo "Pod status in namespace '${MONITORING_NAMESPACE}':"
                         sh "kubectl get pods -n ${MONITORING_NAMESPACE}"
                         echo "--------------------------------------------------------"
                     }
